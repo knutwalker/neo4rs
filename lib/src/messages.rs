@@ -1,5 +1,4 @@
 mod begin;
-mod bye;
 mod commit;
 mod discard;
 mod failure;
