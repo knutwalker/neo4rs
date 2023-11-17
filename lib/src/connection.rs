@@ -1,5 +1,5 @@
 use crate::{
-    bolt::{ExpectedResponse, Message, MessageResponse},
+    bolt::{ExpectedResponse, Hello, Message, MessageResponse},
     errors::{Error, Result},
     messages::{BoltRequest, BoltResponse},
     version::Version,
@@ -94,13 +94,14 @@ impl Connection {
         stream.read_exact(&mut response).await?;
         let version = Version::parse(response)?;
         let mut connection = Connection { version, stream };
-        let hello = BoltRequest::hello("neo4rs", user, password);
-        match connection.send_recv(hello).await? {
-            BoltResponse::Success(_msg) => Ok(connection),
-            BoltResponse::Failure(msg) => {
-                Err(Error::AuthenticationError(msg.get("message").unwrap()))
-            }
-            msg => Err(msg.into_error("HELLO")),
+
+        let hello = Hello::new("neo4rs", user, password);
+        let hello = connection.send_recv_as(hello).await?;
+
+        match hello {
+            Summary::Success(_msg) => Ok(connection),
+            Summary::Ignored => todo!(),
+            Summary::Failure(msg) => Err(Error::AuthenticationError(msg.message)),
         }
     }
 

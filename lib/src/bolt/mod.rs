@@ -10,6 +10,7 @@ use serde::{
 
 mod detail;
 mod packstream;
+mod request;
 mod summary;
 
 pub use detail::Detail;
@@ -17,6 +18,7 @@ pub use detail::Detail;
 pub use packstream::debug::Dbg;
 use packstream::ser::AsMap;
 pub use packstream::{de, ser};
+pub use request::Hello;
 pub use summary::{Failure, Streaming, StreamingSummary, Success, Summary};
 
 pub(crate) trait Message: Serialize {
