@@ -18,7 +18,7 @@ pub use detail::Detail;
 pub use packstream::debug::Dbg;
 use packstream::ser::AsMap;
 pub use packstream::{de, ser};
-pub use request::{Goodbye, Hello};
+pub use request::{Goodbye, Hello, Reset};
 pub use summary::{Failure, Streaming, StreamingSummary, Success, Summary};
 
 pub(crate) trait Message: Serialize {

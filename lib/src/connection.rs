@@ -1,5 +1,5 @@
 use crate::{
-    bolt::{ExpectedResponse, Hello, Message, MessageResponse},
+    bolt::{ExpectedResponse, Hello, Message, MessageResponse, Reset, Summary},
     errors::{Error, Result},
     messages::{BoltRequest, BoltResponse},
     version::Version,
@@ -106,14 +106,13 @@ impl Connection {
     }
 
     pub async fn reset(&mut self) -> Result<()> {
-        match self.send_recv(BoltRequest::reset()).await? {
-            BoltResponse::Success(_) => Ok(()),
-            BoltResponse::Failure(f) => Err(Error::Failure {
-                code: f.code().into(),
-                message: f.message().into(),
-                msg: "RESET",
-            }),
-            msg => Err(msg.into_error("RESET")),
+        match self.send_recv_as(Reset).await? {
+            Summary::Success(_) => Ok(()),
+            Summary::Failure(err) => Err(crate::Error::ConnectionClosed(err)),
+            msg => Err(crate::Error::UnexpectedMessage(format!(
+                "unexpected response for RESET: {:?}",
+                msg
+            ))),
         }
     }
 

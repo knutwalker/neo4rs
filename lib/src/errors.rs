@@ -1,5 +1,5 @@
 use crate::{
-    bolt::{de, ser},
+    bolt::{de, ser, Failure},
     DeError,
 };
 
@@ -31,6 +31,9 @@ pub enum Error {
 
     #[error("connection error")]
     ConnectionError,
+
+    #[error("The connection has been closed [{}]: {}", _0.code, _0.message)]
+    ConnectionClosed(Failure),
 
     #[error("attempted to serialize excessively long string")]
     StringTooLong,

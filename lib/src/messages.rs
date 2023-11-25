@@ -4,7 +4,6 @@ mod discard;
 mod failure;
 mod pull;
 mod record;
-mod reset;
 mod rollback;
 mod run;
 mod success;
@@ -21,7 +20,6 @@ use discard::Discard;
 use failure::Failure;
 use pull::Pull;
 use record::Record;
-use reset::Reset;
 use rollback::Rollback;
 use run::Run;
 use success::Success;
@@ -41,7 +39,6 @@ pub enum BoltRequest {
     Begin(Begin),
     Commit(Commit),
     Rollback(Rollback),
-    Reset(Reset),
 }
 
 impl BoltRequest {
@@ -69,10 +66,6 @@ impl BoltRequest {
     pub fn rollback() -> BoltRequest {
         BoltRequest::Rollback(Rollback::new())
     }
-
-    pub fn reset() -> BoltRequest {
-        BoltRequest::Reset(Reset::new())
-    }
 }
 
 impl BoltRequest {
@@ -84,7 +77,6 @@ impl BoltRequest {
             BoltRequest::Begin(begin) => begin.into_bytes(version)?,
             BoltRequest::Commit(commit) => commit.into_bytes(version)?,
             BoltRequest::Rollback(rollback) => rollback.into_bytes(version)?,
-            BoltRequest::Reset(reset) => reset.into_bytes(version)?,
         };
         Ok(bytes)
     }
