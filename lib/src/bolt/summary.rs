@@ -1,6 +1,6 @@
 use std::{fmt, marker::PhantomData};
 
-use serde::{
+use ::serde::{
     de::{self, VariantAccess as _, Visitor},
     Deserialize,
 };
@@ -31,6 +31,15 @@ pub struct Success<R> {
     pub(crate) metadata: R,
 }
 
+// impl<'de, R: Deserialize<'de>> Deserialize<'de> for Success<R> {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: serde::Deserializer<'de>,
+//     {
+//         R::deserialize(deserializer).map(|metadata| Self { metadata })
+//     }
+// }
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct Failure {
     pub(crate) code: String,
@@ -44,6 +53,57 @@ impl Failure {
         crate::errors::Error::Failure { code, message, msg }
     }
 }
+
+// crate::cenum!(pub(crate) FailureFields { Code, Message });
+
+// impl<'de> Deserialize<'de> for Failure {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: serde::Deserializer<'de>,
+//     {
+//         struct FailureVisitor;
+
+//         impl<'de> Visitor<'de> for FailureVisitor {
+//             type Value = Failure;
+
+//             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+//                 formatter.write_str("A Bolt failure struct")
+//             }
+
+//             fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+//             where
+//                 A: de::MapAccess<'de>,
+//             {
+//                 let mut code = None;
+//                 let mut message = None;
+
+//                 while let Some(key) = map.next_key()? {
+//                     match key {
+//                         FailureFields::Code => {
+//                             if code.is_some() {
+//                                 return Err(de::Error::duplicate_field("code"));
+//                             }
+//                             code = Some(map.next_value()?);
+//                         }
+//                         FailureFields::Message => {
+//                             if message.is_some() {
+//                                 return Err(de::Error::duplicate_field("message"));
+//                             }
+//                             message = Some(map.next_value()?);
+//                         }
+//                     }
+//                 }
+
+//                 let code = code.ok_or_else(|| de::Error::missing_field("code"))?;
+//                 let message = message.ok_or_else(|| de::Error::missing_field("message"))?;
+
+//                 Ok(Failure { code, message })
+//             }
+//         }
+
+//         deserializer.deserialize_struct("Failure", &["code", "message"], FailureVisitor)
+//     }
+// }
 
 impl<'de, R: Deserialize<'de>> Deserialize<'de> for Summary<R> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
