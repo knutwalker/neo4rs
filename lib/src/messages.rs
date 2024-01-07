@@ -1,6 +1,5 @@
 mod begin;
 mod commit;
-mod discard;
 mod failure;
 mod pull;
 mod record;
@@ -16,7 +15,6 @@ use crate::{
 use begin::Begin;
 use bytes::Bytes;
 use commit::Commit;
-use discard::Discard;
 use failure::Failure;
 use pull::Pull;
 use record::Record;
@@ -35,7 +33,6 @@ pub enum BoltResponse {
 pub enum BoltRequest {
     Run(Run),
     Pull(Pull),
-    Discard(Discard),
     Begin(Begin),
     Commit(Commit),
     Rollback(Rollback),
@@ -48,10 +45,6 @@ impl BoltRequest {
 
     pub fn pull(n: usize, qid: i64) -> BoltRequest {
         BoltRequest::Pull(Pull::new(n as i64, qid))
-    }
-
-    pub fn discard() -> BoltRequest {
-        BoltRequest::Discard(Discard::default())
     }
 
     pub fn begin(db: &str) -> BoltRequest {
@@ -73,7 +66,6 @@ impl BoltRequest {
         let bytes: Bytes = match self {
             BoltRequest::Run(run) => run.into_bytes(version)?,
             BoltRequest::Pull(pull) => pull.into_bytes(version)?,
-            BoltRequest::Discard(discard) => discard.into_bytes(version)?,
             BoltRequest::Begin(begin) => begin.into_bytes(version)?,
             BoltRequest::Commit(commit) => commit.into_bytes(version)?,
             BoltRequest::Rollback(rollback) => rollback.into_bytes(version)?,

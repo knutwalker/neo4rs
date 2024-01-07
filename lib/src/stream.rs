@@ -1,4 +1,5 @@
 use crate::{
+    bolt::{Discard, Streaming, StreamingSummary, Summary},
     errors::{Error, Result},
     messages::{BoltRequest, BoltResponse},
     pool::ManagedConnection,
@@ -21,6 +22,7 @@ pub struct RowStream {
     state: State,
     fetch_size: usize,
     buffer: VecDeque<Row>,
+    summary: Option<Box<StreamingSummary>>,
 }
 
 /// An abstraction over a stream of rows, this is returned as a result of [`crate::Graph::execute`].
@@ -41,6 +43,7 @@ impl RowStream {
             fetch_size,
             state: State::Ready,
             buffer: VecDeque::with_capacity(fetch_size),
+            summary: None,
         }
     }
 }
@@ -52,6 +55,42 @@ impl DetachedRowStream {
 }
 
 impl RowStream {
+    pub async fn finish(
+        mut self,
+        mut handle: impl TransactionHandle,
+    ) -> Result<Option<StreamingSummary>> {
+        if self.state == State::Complete {
+            return Ok(self.summary.take().map(|s| *s));
+        }
+        let connected = handle.connection();
+        loop {
+            let summary = connected
+                .send_recv_as(Discard::all().for_query(self.qid))
+                .await?;
+            match summary {
+                Summary::Success(s) => match s.metadata {
+                    Streaming::Done(summary) => {
+                        self.state = State::Complete;
+                        break Ok(Some(*summary));
+                    }
+                    Streaming::HasMore => {}
+                },
+                Summary::Ignored => {
+                    self.state = State::Complete;
+                    break Ok(None);
+                }
+                Summary::Failure(f) => {
+                    self.state = State::Complete;
+                    break Err(Error::Failure {
+                        code: f.code,
+                        message: f.message,
+                        msg: "DISCARD",
+                    });
+                }
+            }
+        }
+    }
+
     /// A call to next() will return a row from an internal buffer if the buffer has any entries,
     /// if the buffer is empty and the server has more rows left to consume, then a new batch of rows
     /// are fetched from the server (using the fetch_size value configured see [`crate::ConfigBuilder::fetch_size`])
