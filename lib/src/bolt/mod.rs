@@ -9,6 +9,7 @@ use serde::{
 };
 
 mod detail;
+mod handshake;
 mod packstream;
 mod request;
 mod summary;
