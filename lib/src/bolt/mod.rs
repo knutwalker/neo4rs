@@ -18,6 +18,8 @@ pub use detail::Detail;
 #[cfg(debug_assertions)]
 pub use packstream::debug::Dbg;
 use packstream::ser::AsMap;
+#[cfg(test)]
+pub use packstream::value::bolt;
 pub use packstream::{de, ser};
 pub use request::{Commit, Discard, Goodbye, Hello, Reset, Rollback};
 pub use summary::{Failure, Streaming, StreamingSummary, Success, Summary};
