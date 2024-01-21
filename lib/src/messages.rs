@@ -1,5 +1,4 @@
 mod begin;
-mod commit;
 mod failure;
 mod pull;
 mod record;
@@ -14,7 +13,6 @@ use crate::{
 };
 use begin::Begin;
 use bytes::Bytes;
-use commit::Commit;
 use failure::Failure;
 use pull::Pull;
 use record::Record;
@@ -34,7 +32,6 @@ pub enum BoltRequest {
     Run(Run),
     Pull(Pull),
     Begin(Begin),
-    Commit(Commit),
     Rollback(Rollback),
 }
 
@@ -52,10 +49,6 @@ impl BoltRequest {
         BoltRequest::Begin(begin)
     }
 
-    pub fn commit() -> BoltRequest {
-        BoltRequest::Commit(Commit::new())
-    }
-
     pub fn rollback() -> BoltRequest {
         BoltRequest::Rollback(Rollback::new())
     }
@@ -67,7 +60,6 @@ impl BoltRequest {
             BoltRequest::Run(run) => run.into_bytes(version)?,
             BoltRequest::Pull(pull) => pull.into_bytes(version)?,
             BoltRequest::Begin(begin) => begin.into_bytes(version)?,
-            BoltRequest::Commit(commit) => commit.into_bytes(version)?,
             BoltRequest::Rollback(rollback) => rollback.into_bytes(version)?,
         };
         Ok(bytes)

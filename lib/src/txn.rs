@@ -1,4 +1,5 @@
 use crate::{
+    bolt::{Commit, Summary},
     config::Database,
     errors::Result,
     messages::{BoltRequest, BoltResponse},
@@ -58,9 +59,8 @@ impl Txn {
 
     /// Commits the transaction in progress
     pub async fn commit(mut self) -> Result<()> {
-        let commit = BoltRequest::commit();
-        match self.connection.send_recv(commit).await? {
-            BoltResponse::Success(_) => Ok(()),
+        match self.connection.send_recv_as(Commit).await? {
+            Summary::Success(_) => Ok(()),
             msg => Err(msg.into_error("COMMIT")),
         }
     }
