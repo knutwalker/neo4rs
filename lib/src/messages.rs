@@ -2,7 +2,6 @@ mod begin;
 mod failure;
 mod pull;
 mod record;
-mod rollback;
 mod run;
 mod success;
 
@@ -16,7 +15,6 @@ use bytes::Bytes;
 use failure::Failure;
 use pull::Pull;
 use record::Record;
-use rollback::Rollback;
 use run::Run;
 use success::Success;
 
@@ -32,7 +30,6 @@ pub enum BoltRequest {
     Run(Run),
     Pull(Pull),
     Begin(Begin),
-    Rollback(Rollback),
 }
 
 impl BoltRequest {
@@ -48,10 +45,6 @@ impl BoltRequest {
         let begin = Begin::new([("db".into(), db.into())].into_iter().collect());
         BoltRequest::Begin(begin)
     }
-
-    pub fn rollback() -> BoltRequest {
-        BoltRequest::Rollback(Rollback::new())
-    }
 }
 
 impl BoltRequest {
@@ -60,7 +53,6 @@ impl BoltRequest {
             BoltRequest::Run(run) => run.into_bytes(version)?,
             BoltRequest::Pull(pull) => pull.into_bytes(version)?,
             BoltRequest::Begin(begin) => begin.into_bytes(version)?,
-            BoltRequest::Rollback(rollback) => rollback.into_bytes(version)?,
         };
         Ok(bytes)
     }

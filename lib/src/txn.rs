@@ -1,5 +1,5 @@
 use crate::{
-    bolt::{Commit, Summary},
+    bolt::{Commit, Rollback, Summary},
     config::Database,
     errors::Result,
     messages::{BoltRequest, BoltResponse},
@@ -67,9 +67,8 @@ impl Txn {
 
     /// rollback/abort the current transaction
     pub async fn rollback(mut self) -> Result<()> {
-        let rollback = BoltRequest::rollback();
-        match self.connection.send_recv(rollback).await? {
-            BoltResponse::Success(_) => Ok(()),
+        match self.connection.send_recv_as(Rollback).await? {
+            Summary::Success(_) => Ok(()),
             msg => Err(msg.into_error("ROLLBACK")),
         }
     }
