@@ -1,7 +1,6 @@
 use crate::{
-    bolt::{Discard, Streaming, StreamingSummary, Summary},
+    bolt::{Discard, Pull, Response, Streaming, StreamingSummary, Summary, WrapExtra as _},
     errors::{Error, Result},
-    messages::{BoltRequest, BoltResponse},
     pool::ManagedConnection,
     row::Row,
     txn::TransactionHandle,
@@ -22,7 +21,6 @@ pub struct RowStream {
     state: State,
     fetch_size: usize,
     buffer: VecDeque<Row>,
-    summary: Option<Box<StreamingSummary>>,
 }
 
 /// An abstraction over a stream of rows, this is returned as a result of [`crate::Graph::execute`].
@@ -43,7 +41,6 @@ impl RowStream {
             fetch_size,
             state: State::Ready,
             buffer: VecDeque::with_capacity(fetch_size),
-            summary: None,
         }
     }
 }
@@ -59,29 +56,25 @@ impl RowStream {
         mut self,
         mut handle: impl TransactionHandle,
     ) -> Result<Option<StreamingSummary>> {
-        if self.state == State::Complete {
-            return Ok(self.summary.take().map(|s| *s));
-        }
-        let connected = handle.connection();
         loop {
-            let summary = connected
-                .send_recv_as(Discard::all().for_query(self.qid))
-                .await?;
+            if let State::Complete(s) = self.state {
+                return Ok(s.map(|o| *o));
+            }
+            let summary = {
+                let connected = handle.connection();
+                connected
+                    .send_recv_as(Discard::all().for_query(self.qid))
+                    .await
+            }?;
             match summary {
                 Summary::Success(s) => match s.metadata {
-                    Streaming::Done(summary) => {
-                        self.state = State::Complete;
-                        break Ok(Some(*summary));
-                    }
+                    Streaming::Done(summary) => self.state = State::Complete(Some(summary)),
                     Streaming::HasMore => {}
                 },
-                Summary::Ignored => {
-                    self.state = State::Complete;
-                    break Ok(None);
-                }
+                Summary::Ignored => self.state = State::Complete(None),
                 Summary::Failure(f) => {
-                    self.state = State::Complete;
-                    break Err(Error::Failure {
+                    self.state = State::Complete(None);
+                    return Err(Error::Failure {
                         code: f.code,
                         message: f.message,
                         msg: "DISCARD",
@@ -96,29 +89,28 @@ impl RowStream {
     /// are fetched from the server (using the fetch_size value configured see [`crate::ConfigBuilder::fetch_size`])
     pub async fn next(&mut self, mut handle: impl TransactionHandle) -> Result<Option<Row>> {
         loop {
-            match self.state {
+            match &self.state {
                 State::Ready => {
-                    let pull = BoltRequest::pull(self.fetch_size, self.qid);
+                    let pull = Pull::some(self.fetch_size as i64).for_query(self.qid);
                     let connection = handle.connection();
-                    connection.send(pull).await?;
+                    connection.send_as(pull).await?;
                     self.state = State::Streaming;
                 }
                 State::Streaming => {
                     let connection = handle.connection();
-                    match connection.recv().await {
-                        Ok(BoltResponse::Success(s)) => {
-                            if s.get("has_more").unwrap_or(false) {
-                                self.state = State::Buffered;
-                            } else {
-                                self.state = State::Complete;
-                            }
-                        }
-                        Ok(BoltResponse::Record(record)) => {
-                            let row = Row::new(self.fields.clone(), record.data);
+                    let response = connection
+                        .recv_as::<Response<BoltList, Streaming>>()
+                        .await?;
+                    match response {
+                        Response::Detail(record) => {
+                            let row = Row::new(self.fields.clone(), record);
                             self.buffer.push_back(row);
                         }
-                        Ok(msg) => return Err(msg.into_error("PULL")),
-                        Err(e) => return Err(e),
+                        Response::Success(Streaming::HasMore) => self.state = State::Buffered,
+                        Response::Success(Streaming::Done(s)) => {
+                            self.state = State::Complete(Some(s))
+                        }
+                        otherwise => return Err(otherwise.into_error("PULL")),
                     }
                 }
                 State::Buffered => {
@@ -127,7 +119,7 @@ impl RowStream {
                     }
                     self.state = State::Ready;
                 }
-                State::Complete => {
+                State::Complete(_) => {
                     return Ok(self.buffer.pop_front());
                 }
             }
@@ -223,10 +215,10 @@ impl DetachedRowStream {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 enum State {
     Ready,
     Streaming,
     Buffered,
-    Complete,
+    Complete(Option<Box<StreamingSummary>>),
 }
