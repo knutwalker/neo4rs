@@ -13,7 +13,6 @@ pub enum Summary<R> {
 }
 
 impl<R: std::fmt::Debug> Summary<R> {
-    #[allow(unused)]
     pub fn into_error(self, msg: &'static str) -> crate::errors::Error {
         match self {
             Summary::Failure(f) => f.into_error(msg),
@@ -30,15 +29,6 @@ impl<R: std::fmt::Debug> Summary<R> {
 pub struct Success<R> {
     pub(crate) metadata: R,
 }
-
-// impl<'de, R: Deserialize<'de>> Deserialize<'de> for Success<R> {
-//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//     where
-//         D: serde::Deserializer<'de>,
-//     {
-//         R::deserialize(deserializer).map(|metadata| Self { metadata })
-//     }
-// }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct Failure {

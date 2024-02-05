@@ -98,3 +98,15 @@ impl<'de, R: Deserialize<'de>, S: Deserialize<'de>> Deserialize<'de> for Respons
         )
     }
 }
+
+impl<R: std::fmt::Debug, S: std::fmt::Debug> Response<R, S> {
+    pub fn into_error(self, msg: &'static str) -> crate::errors::Error {
+        match self {
+            Response::Failure(f) => f.into_error(msg),
+            otherwise => crate::Error::UnexpectedMessage(format!(
+                "unexpected response for {}: {:?}",
+                msg, otherwise
+            )),
+        }
+    }
+}
