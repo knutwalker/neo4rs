@@ -1,5 +1,5 @@
 use crate::{
-    bolt::{Discard, Summary},
+    bolt::{Discard, Summary, WrapExtra as _},
     errors::Result,
     messages::{BoltRequest, BoltResponse},
     pool::ManagedConnection,

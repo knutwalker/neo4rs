@@ -1,7 +1,10 @@
 use std::num::TryFromIntError;
 
 use crate::{
-    bolt::{ExpectedResponse, Streaming, Summary},
+    bolt::{
+        request::extra::{Extra, WrapExtra},
+        ExpectedResponse, Streaming, Summary,
+    },
     errors::{Error, Result},
 };
 use serde::Serialize;
@@ -11,41 +14,14 @@ pub struct Pull {
     extra: Extra,
 }
 
-impl Pull {
-    pub fn all() -> Self {
-        Self::new(None, None)
+impl WrapExtra for Pull {
+    fn create(extra: Extra) -> Self {
+        Self { extra }
     }
 
-    pub fn some(n: u32) -> Self {
-        Self::new(Some(i64::from(n)), None)
+    fn extra_mut(&mut self) -> &mut Extra {
+        &mut self.extra
     }
-
-    pub fn many<T: TryInto<i64, Error = TryFromIntError>>(n: T) -> Result<Self> {
-        let n = n.try_into().map_err(|e| Error::IntegerOverflow("n", e))?;
-        Ok(Self::new(Some(n), None))
-    }
-
-    pub fn for_query(mut self, query_id: i64) -> Self {
-        self.extra.qid = Some(query_id);
-        self
-    }
-
-    pub fn for_last_query(self) -> Self {
-        self.for_query(-1)
-    }
-
-    fn new(how_many: Option<i64>, qid: Option<i64>) -> Self {
-        let n = how_many.filter(|i| *i >= 0).unwrap_or(-1);
-        let extra = Extra { n, qid };
-        Pull { extra }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-struct Extra {
-    n: i64,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    qid: Option<i64>,
 }
 
 impl Serialize for Pull {

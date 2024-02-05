@@ -21,7 +21,7 @@ use packstream::ser::AsMap;
 #[cfg(test)]
 pub use packstream::value::bolt;
 pub use packstream::{de, ser};
-pub use request::{Commit, Discard, Goodbye, Hello, Reset, Rollback};
+pub use request::{Commit, Discard, Goodbye, Hello, Pull, Reset, Rollback, WrapExtra};
 pub use summary::{Failure, Streaming, StreamingSummary, Success, Summary};
 
 pub(crate) trait Message: Serialize {
