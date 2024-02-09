@@ -340,6 +340,7 @@ impl<'de> Deserializer<'de> {
     }
 }
 
+#[derive(Debug)]
 struct ItemsParser<'a> {
     len: usize,
     excess: usize,
@@ -538,6 +539,12 @@ impl Visitation {
 struct SharedBytes<'a> {
     bytes: *mut Bytes,
     _lifetime: PhantomData<&'a mut ()>,
+}
+
+impl<'a> fmt::Debug for SharedBytes<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        crate::bolt::Dbg(unsafe { &*self.bytes }).fmt(f)
+    }
 }
 
 impl<'a> SharedBytes<'a> {
