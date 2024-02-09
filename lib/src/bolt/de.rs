@@ -457,34 +457,14 @@ impl<'a, 'de> VariantAccess<'de> for ItemsParser<'a> {
     }
 
     fn struct_variant<V>(
-        mut self,
+        self,
         _fields: &'static [&'static str],
         visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        struct StructVariant<V> {
-            visitor: V,
-        }
-
-        impl<'de, V> DeserializeSeed<'de> for StructVariant<V>
-        where
-            V: Visitor<'de>,
-        {
-            type Value = V::Value;
-
-            fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                deserializer.deserialize_map(self.visitor)
-            }
-        }
-
-        self.next_value_seed(StructVariant { visitor })
-
-        // visitor.visit_map(self)
+        visitor.visit_seq(self)
     }
 }
 
