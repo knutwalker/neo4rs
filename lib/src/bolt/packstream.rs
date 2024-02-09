@@ -1,5 +1,8 @@
 use bytes::Bytes;
-use serde::de::{Deserialize, DeserializeOwned};
+use serde::{
+    de::{Deserialize, DeserializeOwned},
+    Deserializer,
+};
 
 #[path = "de.rs"]
 pub mod de;
@@ -32,6 +35,49 @@ impl Data {
 
     pub fn into_inner(self) -> Bytes {
         self.keep_alive
+    }
+}
+
+impl<'de> Deserialize<'de> for Data {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        RawBytes::deserialize(deserializer).map(|bytes| Self::new(bytes.0))
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct RawBytes(pub(crate) Bytes);
+
+impl<'de> Deserialize<'de> for RawBytes {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct RawBytesVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for RawBytesVisitor {
+            type Value = Bytes;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a pointer to a Bytes instance")
+            }
+
+            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let bytes = v as usize as *mut Bytes;
+                let bytes = unsafe { Box::from_raw(bytes) };
+                let bytes = *bytes;
+                Ok(bytes)
+            }
+        }
+
+        deserializer
+            .deserialize_newtype_struct("__neo4rs::RawBytes", RawBytesVisitor)
+            .map(Self)
     }
 }
 

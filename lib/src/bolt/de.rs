@@ -18,8 +18,7 @@ impl<'a: 'de, 'de> de::Deserializer<'de> for Deserializer<'a> {
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 str
-        string newtype_struct ignored_any
-        map unit_struct struct enum identifier
+        string ignored_any map unit_struct struct enum identifier
     }
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -118,6 +117,21 @@ impl<'a: 'de, 'de> de::Deserializer<'de> for Deserializer<'a> {
         self.deserialize_bytes(visitor)
     }
 
+    fn deserialize_newtype_struct<V>(
+        self,
+        name: &'static str,
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        if name == "__neo4rs::RawBytes" {
+            self.parse_next_item(Visitation::RawBytes, visitor)
+        } else {
+            self.parse_next_item(Visitation::default(), visitor)
+        }
+    }
+
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
@@ -158,14 +172,23 @@ impl<'de> Deserializer<'de> {
             return Err(Error::Empty);
         }
 
-        if let Visitation::SeqAsTuple(2) = v {
-            return if self.bytes[0] == 0x92 {
-                self.bytes.advance(1);
-                Self::parse_list(v, 2, self.bytes, visitor)
-            } else {
-                visitor.visit_seq(ItemsParser::new(2, self.bytes))
-            };
-        }
+        match v {
+            Visitation::SeqAsTuple(2) => {
+                return if self.bytes[0] == 0x92 {
+                    self.bytes.advance(1);
+                    Self::parse_list(v, 2, self.bytes, visitor)
+                } else {
+                    visitor.visit_seq(ItemsParser::new(2, self.bytes))
+                };
+            }
+            Visitation::RawBytes => {
+                let bytes = self.next_item_as_bytes()?;
+                let bytes = Box::new(bytes);
+                let bytes = Box::into_raw(bytes);
+                return visitor.visit_u64(bytes as usize as u64);
+            }
+            _ => (),
+        };
 
         Self::parse(v, self.bytes, visitor)
     }
@@ -173,6 +196,22 @@ impl<'de> Deserializer<'de> {
     fn skip_next_item(self) -> Result<(), Error> {
         self.parse_next_item(Visitation::BytesAsBytes, de::IgnoredAny)
             .map(|_| ())
+    }
+
+    fn next_item_as_bytes(self) -> Result<Bytes, Error> {
+        let mut full_bytes = self.bytes.clone();
+
+        {
+            let this = Deserializer { bytes: self.bytes };
+            this.skip_next_item()?;
+        }
+
+        let start = full_bytes.as_ptr();
+        let end = self.bytes.as_ptr();
+
+        let len = unsafe { end.offset_from(start) };
+        full_bytes.truncate(len.unsigned_abs());
+        Ok(full_bytes)
     }
 
     fn parse<V: Visitor<'de>>(
@@ -481,6 +520,7 @@ enum Visitation {
     #[default]
     Default,
     BytesAsBytes,
+    RawBytes,
     MapAsSeq,
     SeqAsTuple(usize),
 }
