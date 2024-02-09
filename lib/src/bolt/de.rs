@@ -421,13 +421,6 @@ impl<'a, 'de> VariantAccess<'de> for ItemsParser<'a> {
 
     fn unit_variant(mut self) -> Result<(), Self::Error> {
         self.next_value()
-        // if self.len != 0 {
-        //     return Err(Error::InvalidLength {
-        //         expected: 0,
-        //         actual: self.len,
-        //     });
-        // }
-        // Ok(())
     }
 
     fn newtype_variant_seed<T>(mut self, seed: T) -> Result<T::Value, Self::Error>
@@ -435,8 +428,6 @@ impl<'a, 'de> VariantAccess<'de> for ItemsParser<'a> {
         T: DeserializeSeed<'de>,
     {
         self.next_value_seed(seed)
-        // let bytes = self.bytes.get();
-        // seed.deserialize(Deserializer { bytes })
     }
 
     fn tuple_variant<V>(mut self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
@@ -463,14 +454,6 @@ impl<'a, 'de> VariantAccess<'de> for ItemsParser<'a> {
         }
 
         self.next_value_seed(TupleVariant { len, visitor })
-
-        // if len != self.len {
-        //     return Err(Error::InvalidLength {
-        //         expected: len,
-        //         actual: self.len,
-        //     });
-        // }
-        // visitor.visit_seq(self)
     }
 
     fn struct_variant<V>(
