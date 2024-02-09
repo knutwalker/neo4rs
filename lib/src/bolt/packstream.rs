@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use serde::{
-    de::{Deserialize, DeserializeOwned},
+    de::{Deserialize, DeserializeOwned, DeserializeSeed},
     Deserializer,
 };
 
@@ -101,6 +101,15 @@ where
     let value = T::deserialize(de)?;
 
     Ok(value)
+}
+
+/// Parse and deserialize a packstream value from the given bytes.
+pub(crate) fn from_bytes_seed<'de, S>(bytes: &'de mut Data, seed: S) -> Result<S::Value, de::Error>
+where
+    S: DeserializeSeed<'de>,
+{
+    let de = de::Deserializer::new(bytes.bytes_mut());
+    seed.deserialize(de)
 }
 
 /// Serialize and packstream encode the given value.
