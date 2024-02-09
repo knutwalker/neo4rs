@@ -381,6 +381,10 @@ impl<'a, 'de> SeqAccess<'de> for ItemsParser<'a> {
         let bytes = self.bytes.get();
         seed.deserialize(Deserializer { bytes }).map(Some)
     }
+
+    fn size_hint(&self) -> Option<usize> {
+        Some(self.len)
+    }
 }
 
 impl<'a, 'de> MapAccess<'de> for ItemsParser<'a> {
@@ -405,6 +409,10 @@ impl<'a, 'de> MapAccess<'de> for ItemsParser<'a> {
     {
         let bytes = self.bytes.get();
         seed.deserialize(Deserializer { bytes })
+    }
+
+    fn size_hint(&self) -> Option<usize> {
+        Some(self.len)
     }
 }
 
