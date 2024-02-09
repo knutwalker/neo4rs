@@ -6,6 +6,35 @@ pub mod de;
 #[path = "ser.rs"]
 pub mod ser;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct Data {
+    bytes: Bytes,
+    keep_alive: Bytes,
+}
+
+impl Data {
+    pub fn new(bytes: Bytes) -> Self {
+        let keep_alive = bytes.clone();
+        Self { bytes, keep_alive }
+    }
+
+    pub fn bytes(&self) -> &Bytes {
+        &self.bytes
+    }
+
+    pub fn bytes_mut(&mut self) -> &mut Bytes {
+        &mut self.bytes
+    }
+
+    pub fn reset(&mut self) {
+        self.bytes = self.keep_alive.clone();
+    }
+
+    pub fn into_inner(self) -> Bytes {
+        self.keep_alive
+    }
+}
+
 /// Parse and deserialize a packstream value from the given bytes.
 pub fn from_bytes<T>(mut bytes: Bytes) -> Result<T, de::Error>
 where
@@ -18,12 +47,11 @@ where
 }
 
 /// Parse and deserialize a packstream value from the given bytes.
-#[allow(unused)]
-pub fn from_bytes_ref<'de, T: 'de>(bytes: &'de mut Bytes) -> Result<T, de::Error>
+pub(crate) fn from_bytes_ref<'de, T: 'de>(bytes: &'de mut Data) -> Result<T, de::Error>
 where
     T: Deserialize<'de>,
 {
-    let de = de::Deserializer::new(bytes);
+    let de = de::Deserializer::new(bytes.bytes_mut());
     let value = T::deserialize(de)?;
 
     Ok(value)

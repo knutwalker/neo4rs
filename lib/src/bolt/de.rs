@@ -227,12 +227,11 @@ impl<'de> Deserializer<'de> {
         bytes: &'de mut Bytes,
         visitor: V,
     ) -> Result<V::Value, Error> {
-        debug_assert!(bytes.len() >= len);
-
-        let bytes = bytes.split_to(len);
+        let bytes = Self::take_slice(len, bytes);
         if v.visit_bytes_as_bytes() {
-            let bytes: &'de [u8] = unsafe { std::mem::transmute(bytes.as_ref()) };
-            visitor.visit_borrowed_bytes(bytes)
+            visitor.visit_borrowed_bytes(unsafe {
+                std::slice::from_raw_parts(bytes.as_ptr(), bytes.len())
+            })
         } else {
             visitor.visit_seq(SeqDeserializer::new(bytes.into_iter()))
         }
@@ -243,15 +242,18 @@ impl<'de> Deserializer<'de> {
         bytes: &'de mut Bytes,
         visitor: V,
     ) -> Result<V::Value, Error> {
-        debug_assert!(bytes.len() >= len);
-
-        let bytes = bytes.split_to(len);
-        let bytes: &'de [u8] = unsafe { std::mem::transmute(bytes.as_ref()) };
-
-        match std::str::from_utf8(bytes) {
-            Ok(s) => visitor.visit_borrowed_str(s),
+        let bytes = Self::take_slice(len, bytes);
+        match std::str::from_utf8(&bytes) {
+            Ok(s) => visitor.visit_borrowed_str(unsafe {
+                std::str::from_utf8_unchecked(std::slice::from_raw_parts(s.as_ptr(), s.len()))
+            }),
             Err(e) => Err(Error::InvalidUtf8(e)),
         }
+    }
+
+    fn take_slice(len: usize, bytes: &mut Bytes) -> Bytes {
+        debug_assert!(bytes.len() >= len);
+        bytes.split_to(len)
     }
 
     fn parse_list<V: Visitor<'de>>(
