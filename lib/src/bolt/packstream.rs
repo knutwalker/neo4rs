@@ -296,6 +296,18 @@ pub mod value {
             self.data.freeze()
         }
     }
+
+    impl Default for BoltBytesBuilder {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
+    impl From<BoltBytesBuilder> for Bytes {
+        fn from(builder: BoltBytesBuilder) -> Self {
+            builder.build()
+        }
+    }
 }
 
 #[cfg(debug_assertions)]
