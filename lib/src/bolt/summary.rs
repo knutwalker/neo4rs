@@ -44,57 +44,6 @@ impl Failure {
     }
 }
 
-// crate::cenum!(pub(crate) FailureFields { Code, Message });
-
-// impl<'de> Deserialize<'de> for Failure {
-//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//     where
-//         D: serde::Deserializer<'de>,
-//     {
-//         struct FailureVisitor;
-
-//         impl<'de> Visitor<'de> for FailureVisitor {
-//             type Value = Failure;
-
-//             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-//                 formatter.write_str("A Bolt failure struct")
-//             }
-
-//             fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-//             where
-//                 A: de::MapAccess<'de>,
-//             {
-//                 let mut code = None;
-//                 let mut message = None;
-
-//                 while let Some(key) = map.next_key()? {
-//                     match key {
-//                         FailureFields::Code => {
-//                             if code.is_some() {
-//                                 return Err(de::Error::duplicate_field("code"));
-//                             }
-//                             code = Some(map.next_value()?);
-//                         }
-//                         FailureFields::Message => {
-//                             if message.is_some() {
-//                                 return Err(de::Error::duplicate_field("message"));
-//                             }
-//                             message = Some(map.next_value()?);
-//                         }
-//                     }
-//                 }
-
-//                 let code = code.ok_or_else(|| de::Error::missing_field("code"))?;
-//                 let message = message.ok_or_else(|| de::Error::missing_field("message"))?;
-
-//                 Ok(Failure { code, message })
-//             }
-//         }
-
-//         deserializer.deserialize_struct("Failure", &["code", "message"], FailureVisitor)
-//     }
-// }
-
 impl<'de, R: Deserialize<'de>> Deserialize<'de> for Summary<R> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -212,6 +161,7 @@ impl<'de> Deserialize<'de> for Streaming {
     where
         D: de::Deserializer<'de>,
     {
+        // TODO: replace with cenum?
         const FIELDS: &[&str] = &[
             "has_more",
             "bookmark",
@@ -249,14 +199,45 @@ impl<'de> Deserialize<'de> for Streaming {
                 macro_rules! set {
                     ($($keys:ident),+ $(,)?) => {
 
+                        #[allow(non_camel_case_types)]
+                        enum Fields { $($keys),+, __Unknown, }
+
+                        struct FieldsVisitor;
+
+                        impl<'de> ::serde::de::Visitor<'de> for FieldsVisitor {
+                            type Value = Fields;
+
+                            fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                                formatter.write_str("a valid field")
+                            }
+
+                            fn visit_str<E: ::serde::de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                                Ok(match v {
+                                    $(
+                                        str!($keys) => Fields::$keys,
+                                    )+
+                                    _ => Fields::__Unknown,
+                                })
+                            }
+                        }
+
+                        impl<'de> ::serde::Deserialize<'de> for Fields {
+                            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+                            where
+                                D: de::Deserializer<'de>,
+                            {
+                                deserializer.deserialize_identifier(FieldsVisitor)
+                            }
+                        }
+
                         $(
                             let mut $keys = None;
                         )+
 
-                        while let Some(key) = map.next_key()? {
+                        while let Some(key) = map.next_key::<Fields>()? {
                             match key {
                                 $(
-                                    str!($keys) => {
+                                    Fields::$keys => {
                                         if $keys.is_some() {
                                             return Err(de::Error::duplicate_field(str!($keys)));
                                         }
@@ -264,7 +245,6 @@ impl<'de> Deserialize<'de> for Streaming {
                                     }
                                 )+
                                 _other => {
-                                    // return Err(de::Error::unknown_field(other, FIELDS));
                                     map.next_value::<de::IgnoredAny>()?;
                                 }
                             }
