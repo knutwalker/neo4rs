@@ -1,5 +1,3 @@
-#![allow(unused_imports)]
-
 use std::marker::PhantomData;
 
 use bytes::Bytes;
@@ -14,10 +12,8 @@ mod packstream;
 mod request;
 mod summary;
 
-pub use detail::Detail;
 #[cfg(debug_assertions)]
 pub use packstream::debug::Dbg;
-use packstream::ser::AsMap;
 #[cfg(test)]
 pub use packstream::value::bolt;
 pub use packstream::{de, ser};

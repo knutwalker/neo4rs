@@ -3,9 +3,9 @@ use crate::{
         request::extra::{Extra, WrapExtra},
         ExpectedResponse, Streaming, Summary,
     },
-    errors::{Error, Result},
+    errors::Result,
 };
-use serde::{ser::SerializeStruct as _, Serialize};
+use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Discard {

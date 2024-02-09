@@ -37,7 +37,6 @@ pub struct Failure {
 }
 
 impl Failure {
-    #[allow(unused)]
     pub fn into_error(self, msg: &'static str) -> crate::errors::Error {
         let Self { code, message } = self;
         crate::errors::Error::Failure { code, message, msg }

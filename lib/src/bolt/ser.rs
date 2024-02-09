@@ -6,8 +6,6 @@ use serde::ser::{self, Impossible, SerializeTupleVariant};
 #[path = "map.rs"]
 mod map;
 
-pub(crate) use map::AsMap;
-
 pub(super) struct Serializer {
     bytes: BytesMut,
 }

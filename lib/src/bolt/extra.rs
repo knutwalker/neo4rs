@@ -1,9 +1,6 @@
 use std::num::TryFromIntError;
 
-use crate::{
-    bolt::{ExpectedResponse, Streaming, Summary},
-    errors::{Error, Result},
-};
+use crate::errors::{Error, Result};
 use serde::{ser::SerializeStruct as _, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -72,7 +69,7 @@ impl Serialize for Extra {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bolt::{packstream::value::bolt, Message as _, MessageResponse as _};
+    use crate::bolt::{packstream::value::bolt, Message as _};
 
     #[test]
     fn serialize() {

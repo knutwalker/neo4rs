@@ -1,11 +1,9 @@
-use std::num::TryFromIntError;
-
 use crate::{
     bolt::{
         request::extra::{Extra, WrapExtra},
         ExpectedResponse, Streaming, Summary,
     },
-    errors::{Error, Result},
+    errors::Result,
 };
 use serde::Serialize;
 
