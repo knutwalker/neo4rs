@@ -111,7 +111,8 @@ mod tests {
     use std::borrow::Cow;
 
     use serde::Deserialize;
-    use test_case::test_matrix;
+    use serde_test::{assert_de_tokens, Token};
+    use test_case::{test_case, test_matrix};
 
     use crate::bolt::{
         bolt,
@@ -132,6 +133,58 @@ mod tests {
         age: u32,
     }
 
+    #[test_case(tokens_v4())]
+    #[test_case(tagged_tokens_v4())]
+    #[test_case(tokens_v5())]
+    #[test_case(tagged_tokens_v5())]
+    fn tokens((tokens, element_id): (Vec<Token>, Option<&str>)) {
+        let rel = Node::new(42, ["Label"], properties_data(), element_id);
+
+        assert_de_tokens(&rel, &tokens);
+    }
+
+    fn tokens_v4() -> (Vec<Token>, Option<&'static str>) {
+        let properties = properties_data();
+        let properties = properties.to_vec();
+        let properties = Vec::leak(properties);
+
+        (
+            vec![
+                Token::Seq { len: Some(3) },
+                Token::U8(42),
+                Token::Seq { len: Some(1) },
+                Token::BorrowedStr("Label"),
+                Token::SeqEnd,
+                Token::BorrowedBytes(properties),
+                Token::SeqEnd,
+            ],
+            None,
+        )
+    }
+
+    fn tagged_tokens_v4() -> (Vec<Token>, Option<&'static str>) {
+        let (mut tokens, element_id) = tokens_v4();
+        tokens.splice(0..0, [Token::Enum { name: "Bolt" }, Token::U32(0x4E)]);
+        (tokens, element_id)
+    }
+
+    fn tokens_v5() -> (Vec<Token>, Option<&'static str>) {
+        let (mut tokens, _) = tokens_v4();
+        tokens[0] = Token::Seq { len: Some(4) };
+        let seq_end = tokens.len() - 1;
+        tokens
+            .splice(seq_end..seq_end, [Token::BorrowedStr("id")])
+            .for_each(drop);
+
+        (tokens, Some("id"))
+    }
+
+    fn tagged_tokens_v5() -> (Vec<Token>, Option<&'static str>) {
+        let (mut tokens, element_ids) = tokens_v5();
+        tokens.splice(0..0, [Token::Enum { name: "Bolt" }, Token::U32(0x4E)]);
+        (tokens, element_ids)
+    }
+
     #[test_matrix(
         [ bolt_v4(),  bolt_v5() ],
         [   owned(), borrowed() ]
@@ -147,13 +200,7 @@ mod tests {
         assert_eq!(node.labels(), &["Label"]);
         assert_eq!(node.element_id(), element_id);
 
-        let properties = bolt()
-            .tiny_map(2)
-            .tiny_string("age")
-            .int16(1337)
-            .tiny_string("name")
-            .tiny_string("Alice")
-            .build();
+        let properties = properties_data();
         assert_eq!(node.properties.bytes(), &properties);
         assert_eq!(node.keys(), &["age", "name"]);
 
@@ -200,10 +247,16 @@ mod tests {
             .tiny_int(42)
             .tiny_list(1)
             .tiny_string("Label")
+            .extend(properties_data())
+    }
+
+    fn properties_data() -> Bytes {
+        bolt()
             .tiny_map(2)
             .tiny_string("age")
             .int16(1337)
             .tiny_string("name")
             .tiny_string("Alice")
+            .build()
     }
 }
