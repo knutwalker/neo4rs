@@ -71,6 +71,20 @@ impl<'de> Deserialize<'de> for RawBytes {
                 let bytes = *bytes;
                 Ok(bytes)
             }
+
+            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Bytes::copy_from_slice(v))
+            }
+
+            fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Bytes::from(v))
+            }
         }
 
         deserializer
