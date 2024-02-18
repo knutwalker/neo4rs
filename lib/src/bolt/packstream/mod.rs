@@ -304,6 +304,11 @@ pub mod value {
             self
         }
 
+        pub fn extend(mut self, bytes: impl AsRef<[u8]>) -> Self {
+            self.data.put_slice(bytes.as_ref());
+            self
+        }
+
         pub fn build(self) -> Bytes {
             self.data.freeze()
         }
