@@ -284,7 +284,7 @@ macro_rules! impl_visitor {
                     where
                         A: ::serde::de::EnumAccess<'de>,
                     {
-                        let (tag, data) = data.variant::<u8>()?;
+                        let (tag, data) = ::serde::de::EnumAccess::variant::<u8>(data)?;
                         if tag != $tag {
                             return Err(serde::de::Error::invalid_type(
                                 serde::de::Unexpected::Other(&format!("struct with tag {:02X}", tag)),
@@ -299,8 +299,7 @@ macro_rules! impl_visitor {
                         A: ::serde::de::SeqAccess<'de>,
                     {
                         $(
-                            let $name = seq
-                                .next_element()?
+                            let $name = ::serde::de::SeqAccess::next_element(&mut seq)?
                                 .ok_or_else(|| ::serde::de::Error::missing_field(stringify!($name)))?;
                         )+
 
