@@ -314,6 +314,24 @@ macro_rules! impl_visitor {
                             $($($opt_name,)+)?
                         })
                     }
+
+                    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+                    where
+                        A: ::serde::de::MapAccess<'de>,
+                    {
+                        let tag = ::serde::de::MapAccess::next_key::<u8>(&mut map)?;
+                        match tag {
+                            Some($tag) => {},
+                            Some(tag) => return Err(serde::de::Error::invalid_type(
+                                serde::de::Unexpected::Other(&format!("struct with tag {:02X}", tag)),
+                                &format!(concat!("a Bolt ", stringify!($typ), " struct (tag {:02X})"), $tag).as_str(),
+                            )),
+                            None => return Err(serde::de::Error::missing_field("tag")),
+                        };
+
+                        let this = ::serde::de::MapAccess::next_value::<Self::Value>(&mut map)?;
+                        Ok(this)
+                    }
                 }
 
                 Vis
