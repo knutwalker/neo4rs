@@ -4,9 +4,7 @@ use serde::{
     Deserializer,
 };
 
-#[path = "de.rs"]
 pub mod de;
-#[path = "ser.rs"]
 pub mod ser;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

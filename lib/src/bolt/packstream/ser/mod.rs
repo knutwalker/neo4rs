@@ -3,7 +3,6 @@ use std::fmt;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::ser::{self, Impossible, SerializeTupleVariant};
 
-#[path = "map.rs"]
 mod map;
 
 pub(super) struct Serializer {
