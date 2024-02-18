@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
 pub use self::node::Node;
+pub use self::rel::Relationship;
 
 mod de;
 mod node;
+mod rel;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Bolt<'de> {
@@ -16,7 +18,7 @@ pub enum Bolt<'de> {
     List(Vec<Bolt<'de>>),
     Dictionary(HashMap<&'de str, Bolt<'de>>),
     Node(Node<'de>),
-    Relationship,
+    Relationship(Relationship<'de>),
     UnboundRelationship,
     Path,
     Date,
@@ -73,5 +75,9 @@ impl<'de> Bolt<'de> {
 
     fn node(node: Node<'de>) -> Self {
         Self::Node(node)
+    }
+
+    fn rel(rel: Relationship<'de>) -> Self {
+        Self::Relationship(rel)
     }
 }
