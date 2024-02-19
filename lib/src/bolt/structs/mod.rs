@@ -2,10 +2,12 @@ use std::collections::HashMap;
 
 pub use self::node::Node;
 pub use self::rel::Relationship;
+pub use self::urel::UnboundRelationship;
 
 mod de;
 mod node;
 mod rel;
+mod urel;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Bolt<'de> {
@@ -19,7 +21,7 @@ pub enum Bolt<'de> {
     Dictionary(HashMap<&'de str, Bolt<'de>>),
     Node(Node<'de>),
     Relationship(Relationship<'de>),
-    UnboundRelationship,
+    UnboundRelationship(UnboundRelationship<'de>),
     Path,
     Date,
     Time,
@@ -79,5 +81,9 @@ impl<'de> Bolt<'de> {
 
     fn rel(rel: Relationship<'de>) -> Self {
         Self::Relationship(rel)
+    }
+
+    fn urel(urel: UnboundRelationship<'de>) -> Self {
+        Self::UnboundRelationship(urel)
     }
 }
