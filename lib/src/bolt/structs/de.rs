@@ -292,6 +292,12 @@ impl<'a, 'de, T: Deserialize<'de> + 'de> DeserializeSeed<'de> for Single<'a, T> 
     }
 }
 
+macro_rules! count_tts {
+    () => { 0 };
+    ($odd:tt $($a:tt $b:tt)*) => { ($crate::bolt::structs::de::count_tts!($($a)*) << 1) | 1 };
+    ($($a:tt $even:tt)*) => { $crate::bolt::structs::de::count_tts!($($a)*) << 1 };
+}
+
 macro_rules! impl_visitor {
     ($typ:ident $(<$($bound:tt),+>)? ($($name:ident),+ $(,)? $([$($opt_name:ident),+ $(,)?])?) == $tag:literal) => {
         impl$(<$($bound),+>)? $typ$(<$($bound),+>)? {
@@ -323,6 +329,18 @@ macro_rules! impl_visitor {
                     where
                         A: ::serde::de::SeqAccess<'de>,
                     {
+
+                        let req_len = $crate::bolt::structs::de::count_tts!($($name)+);
+                        let max_len = req_len + ($crate::bolt::structs::de::count_tts!($($($opt_name)+)?));
+
+                        let len = ::serde::de::SeqAccess::size_hint(&seq).unwrap_or_default();
+                        if len < req_len || len > max_len {
+                            return Err(::serde::de::Error::invalid_length(
+                                len,
+                                &format!("a sequence of length {} to {}", req_len, max_len).as_str(),
+                            ));
+                        }
+
                         $(
                             let $name = ::serde::de::SeqAccess::next_element(&mut seq)?
                                 .ok_or_else(|| ::serde::de::Error::missing_field(stringify!($name)))?;
@@ -364,6 +382,8 @@ macro_rules! impl_visitor {
         }
     };
 }
+
+pub(crate) use count_tts;
 pub(crate) use impl_visitor;
 
 #[cfg(test)]
