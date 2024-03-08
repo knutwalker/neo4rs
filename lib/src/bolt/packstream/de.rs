@@ -428,30 +428,11 @@ impl<'a, 'de> VariantAccess<'de> for ItemsParser<'a> {
         self.next_value_seed(seed)
     }
 
-    fn tuple_variant<V>(mut self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
+    fn tuple_variant<V>(mut self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        struct TupleVariant<V> {
-            len: usize,
-            visitor: V,
-        }
-
-        impl<'de, V> DeserializeSeed<'de> for TupleVariant<V>
-        where
-            V: Visitor<'de>,
-        {
-            type Value = V::Value;
-
-            fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                deserializer.deserialize_tuple(self.len, self.visitor)
-            }
-        }
-
-        self.next_value_seed(TupleVariant { len, visitor })
+        visitor.visit_seq(self)
     }
 
     fn struct_variant<V>(
