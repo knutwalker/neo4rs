@@ -183,9 +183,7 @@ impl<'de> Deserializer<'de> {
             }
             Visitation::RawBytes => {
                 let bytes = self.next_item_as_bytes()?;
-                let bytes = Box::new(bytes);
-                let bytes = Box::into_raw(bytes);
-                return visitor.visit_u64(bytes as usize as u64);
+                return visitor.visit_bytes(&bytes);
             }
             _ => (),
         };
