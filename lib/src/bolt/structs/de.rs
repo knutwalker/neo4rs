@@ -24,6 +24,20 @@ impl<'de> Deserialize<'de> for Bolt<'de> {
                 formatter.write_str("A Bolt Node struct")
             }
 
+            fn visit_unit<E>(self) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Ok(Bolt::Null)
+            }
+
+            fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Ok(Bolt::Boolean(v))
+            }
+
             fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
             where
                 E: Error,
@@ -37,6 +51,13 @@ impl<'de> Deserialize<'de> for Bolt<'de> {
             {
                 // TODO
                 Ok(Bolt::Integer(v as i64))
+            }
+
+            fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Ok(Bolt::Float(v))
             }
 
             fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
