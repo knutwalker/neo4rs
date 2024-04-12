@@ -126,6 +126,28 @@ impl<'de> Relationship<'de> {
             end_node_element_id,
         }
     }
+
+    pub(crate) fn from_other_rel(
+        id: u64,
+        element_id: Option<&'de str>,
+        start_node_id: u64,
+        start_node_element_id: Option<&'de str>,
+        end_node_id: u64,
+        end_node_element_id: Option<&'de str>,
+        r#type: &'de str,
+        properties: Data,
+    ) -> Self {
+        Self {
+            id,
+            start_node_id,
+            end_node_id,
+            r#type,
+            properties,
+            element_id,
+            start_node_element_id,
+            end_node_element_id,
+        }
+    }
 }
 
 impl_visitor!(Relationship<'de>(id, start_node_id, end_node_id, r#type, properties, [element_id, start_node_element_id, end_node_element_id]) == 0x52);

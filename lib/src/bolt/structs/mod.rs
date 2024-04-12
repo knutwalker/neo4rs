@@ -6,6 +6,7 @@ pub use self::urel::UnboundRelationship;
 
 mod de;
 mod node;
+mod path;
 mod rel;
 mod urel;
 

@@ -4,6 +4,7 @@ use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 use crate::bolt::{
     packstream::{self, Data},
     structs::de::impl_visitor,
+    Relationship,
 };
 
 use super::de::{Keys, Single};
@@ -91,6 +92,25 @@ impl<'de> UnboundRelationship<'de> {
             properties,
             element_id,
         }
+    }
+
+    pub(crate) fn bind(
+        &self,
+        start_node_id: u64,
+        start_node_element_id: Option<&'de str>,
+        end_node_id: u64,
+        end_node_element_id: Option<&'de str>,
+    ) -> super::Relationship<'de> {
+        Relationship::from_other_rel(
+            self.id,
+            self.element_id.clone(),
+            start_node_id,
+            start_node_element_id,
+            end_node_id,
+            end_node_element_id,
+            self.r#type,
+            self.properties.clone(),
+        )
     }
 }
 
