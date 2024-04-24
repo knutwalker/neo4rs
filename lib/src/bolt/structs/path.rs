@@ -2,7 +2,7 @@ use serde::de::{Deserialize, Deserializer, Error};
 
 use crate::bolt::structs::de::impl_visitor;
 
-use super::{Node, Relationship, UnboundRelationship};
+use super::{urel::UnboundRelationship, Node, Relationship};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Path<'de> {
@@ -38,14 +38,14 @@ impl<'de> Path<'de> {
         self.nodes.iter().find(|o| o.id() == id)
     }
 
-    /// Returns a reference to the [`UnboundRelationship`] with the given id if it is contained in this path.
-    pub fn get_unbounded_relationship_by_id(&self, id: u64) -> Option<&UnboundRelationship<'de>> {
-        self.rels.iter().find(|o| o.id() == id)
-    }
-
     /// Returns a [`Relationship`] with the given id if it is contained in this path.
     pub fn get_relationship_by_id(&self, id: u64) -> Option<Relationship<'de>> {
         self.relationships().find(|o| o.id() == id)
+    }
+
+    #[cfg(test)]
+    fn get_unbounded_relationship_by_id(&self, id: u64) -> Option<&UnboundRelationship<'de>> {
+        self.rels.iter().find(|o| o.id() == id)
     }
 
     /// Returns an [`Iterator`] over the nodes in this path.

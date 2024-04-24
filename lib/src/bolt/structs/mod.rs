@@ -3,7 +3,6 @@ use std::collections::HashMap;
 pub use self::node::Node;
 pub use self::path::{Path, Segment};
 pub use self::rel::Relationship;
-pub use self::urel::UnboundRelationship;
 
 mod de;
 mod node;
@@ -24,7 +23,6 @@ pub enum Bolt<'de> {
     Dictionary(HashMap<&'de str, Bolt<'de>>),
     Node(Node<'de>),
     Relationship(Relationship<'de>),
-    UnboundRelationship(UnboundRelationship<'de>),
     Path(Path<'de>),
     // Date,
     // Time,
@@ -69,7 +67,6 @@ impl_from!(List(Vec<Bolt<'de>>): Vec<Bolt<'de>>, &'de [Bolt<'de>]);
 impl_from!(Dictionary(HashMap<&'de str, Bolt<'de>>));
 impl_from!(Node(Node<'de>));
 impl_from!(Relationship(Relationship<'de>));
-impl_from!(UnboundRelationship(UnboundRelationship<'de>));
 impl_from!(Path(Path<'de>));
 
 macro_rules! impl_try_from_int {

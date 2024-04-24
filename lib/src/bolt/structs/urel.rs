@@ -9,15 +9,16 @@ use crate::bolt::{
 
 use super::de::{Keys, Single};
 
+/// An unbounded relationship within the graph.
+/// The difference to [`super::Relationship`] is that an unbounded relationship
 #[derive(Clone, Debug, PartialEq)]
-pub struct UnboundRelationship<'de> {
+pub(super) struct UnboundRelationship<'de> {
     id: u64,
     r#type: &'de str,
     properties: Data,
     element_id: Option<&'de str>,
 }
 
-/// A node within the graph.
 impl<'de> UnboundRelationship<'de> {
     /// An id for this relationship.
     ///

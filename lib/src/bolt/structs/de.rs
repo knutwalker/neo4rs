@@ -8,7 +8,7 @@ use serde::{
     Deserialize, Deserializer,
 };
 
-use super::{Bolt, Node, Path, Relationship, UnboundRelationship};
+use super::{Bolt, Node, Path, Relationship};
 
 impl<'de> Deserialize<'de> for Bolt<'de> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -109,9 +109,6 @@ impl<'de> Deserialize<'de> for Bolt<'de> {
                     0x52 => data
                         .struct_variant(&[], Relationship::visitor())
                         .map(Bolt::Relationship),
-                    0x72 => data
-                        .struct_variant(&[], UnboundRelationship::visitor())
-                        .map(Bolt::UnboundRelationship),
                     0x50 => data.struct_variant(&[], Path::visitor()).map(Bolt::Path),
                     0x44 => todo!("Date"),
                     0x54 => todo!("Time"),
@@ -124,6 +121,10 @@ impl<'de> Deserialize<'de> for Bolt<'de> {
                     0x59 => todo!("Point3D"),
                     0x46 => todo!("Legacy DateTime"),
                     0x66 => todo!("Legacy DateTimeZoneId"),
+                    0x72 => Err(Error::invalid_type(
+                        serde::de::Unexpected::Other("unbounded relationship outside of a path"),
+                        &"a valid Bolt struct",
+                    )),
                     _ => Err(Error::invalid_type(
                         serde::de::Unexpected::Other(&format!("struct with tag {tag:02X}")),
                         &"a valid Bolt struct",
