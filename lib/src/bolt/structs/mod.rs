@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
+pub use self::datetime::Date;
 pub use self::node::Node;
 pub use self::path::{Path, Segment};
 pub use self::rel::Relationship;
 
+mod datetime;
 mod de;
 mod node;
 mod path;
@@ -24,7 +26,7 @@ pub enum Bolt<'de> {
     Node(Node<'de>),
     Relationship(Relationship<'de>),
     Path(Path<'de>),
-    // Date,
+    Date(Date<'de>),
     // Time,
     // LocalTime,
     // DateTime,
@@ -68,6 +70,7 @@ impl_from!(Dictionary(HashMap<&'de str, Bolt<'de>>));
 impl_from!(Node(Node<'de>));
 impl_from!(Relationship(Relationship<'de>));
 impl_from!(Path(Path<'de>));
+impl_from!(Date(Date<'de>));
 
 macro_rules! impl_try_from_int {
     ($($t:ty),*) => {

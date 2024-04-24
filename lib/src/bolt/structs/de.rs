@@ -8,7 +8,7 @@ use serde::{
     Deserialize, Deserializer,
 };
 
-use super::{Bolt, Node, Path, Relationship};
+use super::{Bolt, Date, Node, Path, Relationship};
 
 impl<'de> Deserialize<'de> for Bolt<'de> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -110,7 +110,7 @@ impl<'de> Deserialize<'de> for Bolt<'de> {
                         .struct_variant(&[], Relationship::visitor())
                         .map(Bolt::Relationship),
                     0x50 => data.struct_variant(&[], Path::visitor()).map(Bolt::Path),
-                    0x44 => todo!("Date"),
+                    0x44 => data.struct_variant(&[], Date::visitor()).map(Bolt::Date),
                     0x54 => todo!("Time"),
                     0x74 => todo!("LocalTime"),
                     0x49 => todo!("DateTime"),
