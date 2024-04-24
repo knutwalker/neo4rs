@@ -8,6 +8,7 @@ use crate::bolt::{
 
 use super::de::{Keys, Single};
 
+/// A relationship within the graph.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Relationship<'de> {
     id: u64,
@@ -20,7 +21,6 @@ pub struct Relationship<'de> {
     end_node_element_id: Option<&'de str>,
 }
 
-/// A node within the graph.
 impl<'de> Relationship<'de> {
     /// An id for this relationship.
     ///

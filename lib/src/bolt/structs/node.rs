@@ -8,6 +8,7 @@ use crate::bolt::{
 
 use super::de::{Keys, Single};
 
+/// A node within the graph.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Node<'de> {
     id: u64,
@@ -16,7 +17,6 @@ pub struct Node<'de> {
     element_id: Option<&'de str>,
 }
 
-/// A node within the graph.
 impl<'de> Node<'de> {
     /// An id for this node.
     ///
