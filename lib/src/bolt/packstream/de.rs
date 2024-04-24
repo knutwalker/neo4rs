@@ -428,7 +428,7 @@ impl<'a, 'de> VariantAccess<'de> for ItemsParser<'a> {
         self.next_value_seed(seed)
     }
 
-    fn tuple_variant<V>(mut self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
+    fn tuple_variant<V>(self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
