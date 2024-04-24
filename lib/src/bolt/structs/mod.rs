@@ -12,6 +12,7 @@ mod rel;
 mod urel;
 
 #[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
 pub enum Bolt<'de> {
     Null,
     Boolean(bool),
@@ -25,67 +26,85 @@ pub enum Bolt<'de> {
     Relationship(Relationship<'de>),
     UnboundRelationship(UnboundRelationship<'de>),
     Path(Path<'de>),
-    Date,
-    Time,
-    LocalTime,
-    DateTime,
-    DateTimeZoneId,
-    LocalDateTime,
-    Duration,
-    Point2D,
-    Point3D,
-    LegacyDateTime,
-    LegacyDateTimeZoneId,
+    // Date,
+    // Time,
+    // LocalTime,
+    // DateTime,
+    // DateTimeZoneId,
+    // LocalDateTime,
+    // Duration,
+    // Point2D,
+    // Point3D,
+    // LegacyDateTime,
+    // LegacyDateTimeZoneId,
 }
 
-impl<'de> Bolt<'de> {
-    fn null() -> Self {
-        Bolt::Null
+impl<'de> From<()> for Bolt<'de> {
+    fn from(_: ()) -> Self {
+        Self::Null
     }
+}
 
-    fn boolean(b: bool) -> Self {
-        Bolt::Boolean(b)
-    }
+macro_rules! impl_from {
+    ($case:ident($target:ty)) => {
+        impl_from!($case($target): $target);
+    };
+    ($case:ident($target:ty): $($t:ty),+ $(,)?) => {
+        $(
+            impl<'de> From<$t> for Bolt<'de> {
+                fn from(value: $t) -> Self {
+                    Self::$case(<$target>::from(value))
+                }
+            }
+        )*
+    };
+}
 
-    fn integer(i: impl Into<i64>) -> Self {
-        Bolt::Integer(i.into())
-    }
+impl_from!(Boolean(bool));
+impl_from!(Integer(i64): u8, u16, u32, i8, i16, i32, i64);
+impl_from!(Float(f64): f32, f64);
+impl_from!(Bytes(&'de [u8]));
+impl_from!(String(&'de str));
+impl_from!(List(Vec<Bolt<'de>>): Vec<Bolt<'de>>, &'de [Bolt<'de>]);
+impl_from!(Dictionary(HashMap<&'de str, Bolt<'de>>));
+impl_from!(Node(Node<'de>));
+impl_from!(Relationship(Relationship<'de>));
+impl_from!(UnboundRelationship(UnboundRelationship<'de>));
+impl_from!(Path(Path<'de>));
 
-    fn float(f: impl Into<f64>) -> Self {
-        Bolt::Float(f.into())
-    }
+macro_rules! impl_try_from_int {
+    ($($t:ty),*) => {
+        $(
+            impl<'de> TryFrom<$t> for Bolt<'de> {
+                type Error = ::std::num::TryFromIntError;
 
-    fn bytes(b: impl Into<&'de [u8]>) -> Self {
-        Bolt::Bytes(b.into())
-    }
+                fn try_from(value: $t) -> Result<Self, Self::Error> {
+                    match i64::try_from(value) {
+                        Ok(value) => Ok(Self::Integer(value)),
+                        Err(e) => Err(e),
+                    }
+                }
+            }
+        )*
+    };
+}
 
-    fn string(s: impl Into<&'de str>) -> Self {
-        Bolt::String(s.into())
-    }
+impl_try_from_int!(u64, isize, usize, u128, i128);
 
-    fn list<I>(items: I) -> Self
+impl<'de> FromIterator<Bolt<'de>> for Bolt<'de> {
+    fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = Bolt<'de>>,
     {
-        Bolt::List(items.into_iter().collect())
+        Self::List(iter.into_iter().collect())
     }
+}
 
-    fn dict<K>(items: impl IntoIterator<Item = (K, Bolt<'de>)>) -> Self
+impl<'de> FromIterator<(&'de str, Bolt<'de>)> for Bolt<'de> {
+    fn from_iter<I>(iter: I) -> Self
     where
-        K: Into<&'de str>,
+        I: IntoIterator<Item = (&'de str, Bolt<'de>)>,
     {
-        Bolt::Dictionary(items.into_iter().map(|(k, v)| (k.into(), v)).collect())
-    }
-
-    fn node(node: Node<'de>) -> Self {
-        Self::Node(node)
-    }
-
-    fn rel(rel: Relationship<'de>) -> Self {
-        Self::Relationship(rel)
-    }
-
-    fn urel(urel: UnboundRelationship<'de>) -> Self {
-        Self::UnboundRelationship(urel)
+        Self::Dictionary(iter.into_iter().collect())
     }
 }
