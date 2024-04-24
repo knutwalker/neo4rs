@@ -104,7 +104,7 @@ impl<'de> UnboundRelationship<'de> {
     ) -> super::Relationship<'de> {
         Relationship::from_other_rel(
             self.id,
-            self.element_id.clone(),
+            self.element_id,
             start_node_id,
             start_node_element_id,
             end_node_id,
