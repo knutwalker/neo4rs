@@ -300,7 +300,7 @@ macro_rules! count_tts {
 }
 
 macro_rules! impl_visitor {
-    ($typ:ident $(<$($bound:tt),+>)? ($($name:ident),+ $(,)? $([$($opt_name:ident),+ $(,)?])?) == $tag:literal) => {
+    ($typ:ident $(<$($bound:tt),+>)? ($($name:ident),+ $(,)? $([$($opt_name:ident),+ $(,)?])? $({$($def_name:ident),+ $(,)?})?) == $tag:literal) => {
         impl$(<$($bound),+>)? $typ$(<$($bound),+>)? {
             pub(super) fn visitor() -> impl ::serde::de::Visitor<$($($bound),+,)? Value = Self> {
                 struct Vis;
@@ -356,6 +356,7 @@ macro_rules! impl_visitor {
                         Ok($typ {
                             $($name,)+
                             $($($opt_name,)+)?
+                            $($($def_name: ::std::default::Default::default(),)+)?
                         })
                     }
 
