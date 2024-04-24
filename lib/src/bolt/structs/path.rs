@@ -85,20 +85,6 @@ pub struct Segment<'path, 'de: 'path> {
     pub end: &'path Node<'de>,
 }
 
-impl<'path, 'de: 'path> Segment<'path, 'de> {
-    fn new(
-        start: &'path Node<'de>,
-        relationship: Relationship<'de>,
-        end: &'path Node<'de>,
-    ) -> Self {
-        Self {
-            start,
-            relationship,
-            end,
-        }
-    }
-}
-
 impl<'a, 'de: 'a> IntoIterator for &'a Path<'de> {
     type Item = Segment<'a, 'de>;
 
@@ -162,7 +148,11 @@ impl<'a, 'de: 'a> SegmentsIter<'a, 'de> {
             let start_node = &self.nodes[self.last_node];
             let end_node = &self.nodes[next_node_index];
 
-            Segment::new(start_node, rel, end_node)
+            Segment {
+                start: start_node,
+                relationship: rel,
+                end: end_node,
+            }
         };
 
         self.last_node = next_node_index;
@@ -359,27 +349,30 @@ mod tests {
         assert_eq!(
             segments,
             vec![
-                Segment::new(
-                    path.get_node_by_id(42).unwrap(),
-                    path.get_unbounded_relationship_by_id(1000)
+                Segment {
+                    start: path.get_node_by_id(42).unwrap(),
+                    relationship: path
+                        .get_unbounded_relationship_by_id(1000)
                         .unwrap()
                         .bind(42, None, 69, None),
-                    path.get_node_by_id(69).unwrap(),
-                ),
-                Segment::new(
-                    path.get_node_by_id(69).unwrap(),
-                    path.get_unbounded_relationship_by_id(1000)
+                    end: path.get_node_by_id(69).unwrap(),
+                },
+                Segment {
+                    start: path.get_node_by_id(69).unwrap(),
+                    relationship: path
+                        .get_unbounded_relationship_by_id(1000)
                         .unwrap()
                         .bind(42, None, 69, None),
-                    path.get_node_by_id(42).unwrap(),
-                ),
-                Segment::new(
-                    path.get_node_by_id(42).unwrap(),
-                    path.get_unbounded_relationship_by_id(1001)
+                    end: path.get_node_by_id(42).unwrap(),
+                },
+                Segment {
+                    start: path.get_node_by_id(42).unwrap(),
+                    relationship: path
+                        .get_unbounded_relationship_by_id(1001)
                         .unwrap()
                         .bind(42, None, 1, None),
-                    path.get_node_by_id(1).unwrap(),
-                ),
+                    end: path.get_node_by_id(1).unwrap(),
+                },
             ]
         )
     }

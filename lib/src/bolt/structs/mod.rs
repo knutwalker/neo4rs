@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 pub use self::node::Node;
+pub use self::path::{Path, Segment};
 pub use self::rel::Relationship;
 pub use self::urel::UnboundRelationship;
 
@@ -23,7 +24,7 @@ pub enum Bolt<'de> {
     Node(Node<'de>),
     Relationship(Relationship<'de>),
     UnboundRelationship(UnboundRelationship<'de>),
-    Path,
+    Path(Path<'de>),
     Date,
     Time,
     LocalTime,

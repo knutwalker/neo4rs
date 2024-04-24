@@ -19,7 +19,7 @@ pub use packstream::debug::Dbg;
 pub use packstream::value::bolt;
 pub use packstream::{de, ser};
 pub use request::{Commit, Discard, Goodbye, Hello, Pull, Reset, Rollback, WrapExtra};
-pub use structs::{Bolt, Node, Relationship, UnboundRelationship};
+pub use structs::{Bolt, Node, Path, Relationship, Segment, UnboundRelationship};
 pub use summary::{Failure, Streaming, StreamingSummary, Success, Summary};
 
 pub(crate) trait Message: Serialize {
