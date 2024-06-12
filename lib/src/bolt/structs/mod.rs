@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-pub use self::datetime::Date;
+pub use self::datetime::{Date, LocalTime, Time};
 pub use self::node::Node;
 pub use self::path::{Path, Segment};
 pub use self::rel::Relationship;
@@ -9,6 +9,7 @@ mod datetime;
 mod de;
 mod node;
 mod path;
+mod point;
 mod rel;
 mod urel;
 
@@ -27,8 +28,8 @@ pub enum Bolt<'de> {
     Relationship(Relationship<'de>),
     Path(Path<'de>),
     Date(Date<'de>),
-    // Time,
-    // LocalTime,
+    Time(Time<'de>),
+    LocalTime(LocalTime<'de>),
     // DateTime,
     // DateTimeZoneId,
     // LocalDateTime,
@@ -71,6 +72,8 @@ impl_from!(Node(Node<'de>));
 impl_from!(Relationship(Relationship<'de>));
 impl_from!(Path(Path<'de>));
 impl_from!(Date(Date<'de>));
+impl_from!(Time(Time<'de>));
+impl_from!(LocalTime(LocalTime<'de>));
 
 macro_rules! impl_try_from_int {
     ($($t:ty),*) => {
