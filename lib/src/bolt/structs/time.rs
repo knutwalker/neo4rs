@@ -9,7 +9,7 @@ use crate::bolt::structs::de::impl_visitor;
 /// An instant capturing the time of day, and the timezone, but not the date.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Time<'de> {
-    nanoseconds: i64,
+    nanoseconds: u64,
     tz_offset_seconds: i32,
     _de: PhantomData<&'de ()>,
 }
@@ -17,7 +17,7 @@ pub struct Time<'de> {
 impl<'de> Time<'de> {
     /// Nanoseconds since midnight in the timezone of this time, not in UTC.
     pub fn nanoseconds_since_midnight(self) -> u64 {
-        self.nanoseconds.unsigned_abs()
+        self.nanoseconds
     }
 
     /// The timezone offset in seconds from UTC.
