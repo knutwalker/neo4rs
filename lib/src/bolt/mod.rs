@@ -19,7 +19,9 @@ pub use packstream::debug::Dbg;
 pub use packstream::value::bolt;
 pub use packstream::{de, ser};
 pub use request::{Commit, Discard, Goodbye, Hello, Pull, Reset, Rollback, WrapExtra};
-pub use structs::{Bolt, Date, DateDuration, LocalTime, Node, Path, Relationship, Segment, Time};
+pub use structs::{
+    Bolt, Date, DateDuration, DateTime, LocalTime, Node, Path, Relationship, Segment, Time,
+};
 pub use summary::{Failure, Streaming, StreamingSummary, Success, Summary};
 
 pub(crate) trait Message: Serialize {
