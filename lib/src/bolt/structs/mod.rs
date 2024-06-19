@@ -1,15 +1,17 @@
 use std::collections::HashMap;
 
-pub use self::datetime::{Date, LocalTime, Time};
+pub use self::date::{Date, DateDuration};
 pub use self::node::Node;
 pub use self::path::{Path, Segment};
 pub use self::rel::Relationship;
+pub use self::time::{LocalTime, Time};
 
-mod datetime;
+mod date;
 mod de;
 mod node;
 mod path;
 mod rel;
+mod time;
 mod urel;
 
 #[derive(Clone, Debug, PartialEq)]
