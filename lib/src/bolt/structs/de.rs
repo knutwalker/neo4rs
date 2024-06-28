@@ -9,7 +9,8 @@ use serde::{
 };
 
 use super::{
-    Bolt, Date, DateTime, LegacyDateTime, LocalDateTime, LocalTime, Node, Path, Relationship, Time,
+    Bolt, Date, DateTime, DateTimeZoneId, LegacyDateTime, LocalDateTime, LocalTime, Node, Path,
+    Relationship, Time,
 };
 
 impl<'de> Deserialize<'de> for Bolt<'de> {
@@ -120,7 +121,9 @@ impl<'de> Deserialize<'de> for Bolt<'de> {
                     0x49 => data
                         .struct_variant(&[], DateTime::visitor())
                         .map(Bolt::DateTime),
-                    0x69 => todo!("DateTimeZoneId"),
+                    0x69 => data
+                        .struct_variant(&[], DateTimeZoneId::visitor())
+                        .map(Bolt::DateTimeZoneId),
                     0x64 => data
                         .struct_variant(&[], LocalDateTime::visitor())
                         .map(Bolt::LocalDateTime),

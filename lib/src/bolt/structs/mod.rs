@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 pub use self::date::{Date, DateDuration};
-pub use self::datetime::{DateTime, LegacyDateTime, LocalDateTime};
+pub use self::datetime::{DateTime, DateTimeZoneId, LegacyDateTime, LocalDateTime};
 pub use self::node::Node;
 pub use self::path::{Path, Segment};
 pub use self::rel::Relationship;
@@ -34,7 +34,7 @@ pub enum Bolt<'de> {
     Time(Time<'de>),
     LocalTime(LocalTime<'de>),
     DateTime(DateTime<'de>),
-    // DateTimeZoneId,
+    DateTimeZoneId(DateTimeZoneId<'de>),
     LocalDateTime(LocalDateTime<'de>),
     // Duration,
     // Point2D,
@@ -78,6 +78,7 @@ impl_from!(Date(Date<'de>));
 impl_from!(Time(Time<'de>));
 impl_from!(LocalTime(LocalTime<'de>));
 impl_from!(DateTime(DateTime<'de>));
+impl_from!(DateTimeZoneId(DateTimeZoneId<'de>));
 impl_from!(LocalDateTime(LocalDateTime<'de>));
 impl_from!(LegacyDateTime(LegacyDateTime<'de>));
 
