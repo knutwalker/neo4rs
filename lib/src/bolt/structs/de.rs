@@ -8,7 +8,9 @@ use serde::{
     Deserialize, Deserializer,
 };
 
-use super::{Bolt, Date, DateTime, LocalTime, Node, Path, Relationship, Time};
+use super::{
+    Bolt, Date, DateTime, LocalDateTime, LocalTime, Node, Path, Relationship, Time,
+};
 
 impl<'de> Deserialize<'de> for Bolt<'de> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -119,7 +121,9 @@ impl<'de> Deserialize<'de> for Bolt<'de> {
                         .struct_variant(&[], DateTime::visitor())
                         .map(Bolt::DateTime),
                     0x69 => todo!("DateTimeZoneId"),
-                    0x64 => todo!("LocalDateTime"),
+                    0x64 => data
+                        .struct_variant(&[], LocalDateTime::visitor())
+                        .map(Bolt::LocalDateTime),
                     0x45 => todo!("Duration"),
                     0x58 => todo!("Point2D"),
                     0x59 => todo!("Point3D"),
