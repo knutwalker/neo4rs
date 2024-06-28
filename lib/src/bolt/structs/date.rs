@@ -44,7 +44,6 @@ impl<'de> Date<'de> {
         time::Duration::days(self.days)
     }
 
-    // #[cfg(feature = "time_v1")]
     pub fn as_time_date(self) -> Option<time::Date> {
         time::Date::from_ordinal_date(1970, 1)
             .ok()?

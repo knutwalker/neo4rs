@@ -29,7 +29,6 @@ impl<'de> DateTime<'de> {
         self.tz_offset_seconds
     }
 
-    // #[cfg(feature = "time_v1")]
     pub fn as_time_datetime(self) -> Option<time::OffsetDateTime> {
         let (dt, tz) =
             convert_to_time_datetime(self.seconds, self.nanoseconds, self.tz_offset_seconds)?;
@@ -61,7 +60,6 @@ impl<'de> LocalDateTime<'de> {
         self.nanoseconds
     }
 
-    // #[cfg(feature = "time_v1")]
     pub fn as_time_datetime(self) -> Option<time::PrimitiveDateTime> {
         let (dt, _tz) = convert_to_time_datetime(self.seconds, self.nanoseconds, 0)?;
         Some(time::PrimitiveDateTime::new(dt.date(), dt.time()))
@@ -97,7 +95,6 @@ impl<'de> LegacyDateTime<'de> {
         self.tz_offset_seconds
     }
 
-    // #[cfg(feature = "time_v1")]
     pub fn as_time_datetime(self) -> Option<time::OffsetDateTime> {
         let (dt, tz) =
             convert_to_time_datetime(self.seconds, self.nanoseconds, self.tz_offset_seconds)?;
@@ -111,7 +108,6 @@ impl<'de> LegacyDateTime<'de> {
     }
 }
 
-// #[cfg(feature = "time_v1")]
 fn convert_to_time_datetime(
     seconds: i64,
     nanoseconds: u32,

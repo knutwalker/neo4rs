@@ -30,7 +30,6 @@ impl<'de> Time<'de> {
         Duration::from_nanos(self.nanoseconds_since_midnight())
     }
 
-    // #[cfg(feature = "time_v1")]
     pub fn as_time_time(self) -> Option<time::OffsetDateTime> {
         Some(
             time::OffsetDateTime::from_unix_timestamp_nanos(self.nanoseconds.into())
@@ -79,7 +78,6 @@ impl<'de> LocalTime<'de> {
         Duration::from_nanos(self.nanoseconds_since_midnight())
     }
 
-    // #[cfg(feature = "time_v1")]
     pub fn as_time_time(self) -> Option<time::Time> {
         let nanos = self.nanoseconds_since_midnight();
         let hours = u8::try_from(nanos / 3_600_000_000_000).ok()?;
