@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 pub use self::date::{Date, DateDuration};
-pub use self::datetime::{DateTime, DateTimeZoneId, LegacyDateTime, LocalDateTime};
+pub use self::datetime::{
+    DateTime, DateTimeZoneId, LegacyDateTime, LegacyDateTimeZoneId, LocalDateTime,
+};
 pub use self::node::Node;
 pub use self::path::{Path, Segment};
 pub use self::rel::Relationship;
@@ -40,7 +42,7 @@ pub enum Bolt<'de> {
     // Point2D,
     // Point3D,
     LegacyDateTime(LegacyDateTime<'de>),
-    // LegacyDateTimeZoneId,
+    LegacyDateTimeZoneId(LegacyDateTimeZoneId<'de>),
 }
 
 impl<'de> From<()> for Bolt<'de> {
@@ -81,6 +83,7 @@ impl_from!(DateTime(DateTime<'de>));
 impl_from!(DateTimeZoneId(DateTimeZoneId<'de>));
 impl_from!(LocalDateTime(LocalDateTime<'de>));
 impl_from!(LegacyDateTime(LegacyDateTime<'de>));
+impl_from!(LegacyDateTimeZoneId(LegacyDateTimeZoneId<'de>));
 
 macro_rules! impl_try_from_int {
     ($($t:ty),*) => {

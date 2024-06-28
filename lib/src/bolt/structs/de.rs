@@ -9,8 +9,8 @@ use serde::{
 };
 
 use super::{
-    Bolt, Date, DateTime, DateTimeZoneId, LegacyDateTime, LocalDateTime, LocalTime, Node, Path,
-    Relationship, Time,
+    Bolt, Date, DateTime, DateTimeZoneId, LegacyDateTime, LegacyDateTimeZoneId, LocalDateTime,
+    LocalTime, Node, Path, Relationship, Time,
 };
 
 impl<'de> Deserialize<'de> for Bolt<'de> {
@@ -133,7 +133,9 @@ impl<'de> Deserialize<'de> for Bolt<'de> {
                     0x46 => data
                         .struct_variant(&[], LegacyDateTime::visitor())
                         .map(Bolt::LegacyDateTime),
-                    0x66 => todo!("Legacy DateTimeZoneId"),
+                    0x66 => data
+                        .struct_variant(&[], LegacyDateTimeZoneId::visitor())
+                        .map(Bolt::LegacyDateTimeZoneId),
                     0x72 => Err(Error::invalid_type(
                         serde::de::Unexpected::Other("unbounded relationship outside of a path"),
                         &"a valid Bolt struct",

@@ -157,6 +157,54 @@ impl<'de> LegacyDateTime<'de> {
     }
 }
 
+/// An instant capturing the date, the time, and the time zone specified with a timezone
+/// iddentifier.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct LegacyDateTimeZoneId<'de> {
+    seconds: i64,
+    nanoseconds: u32,
+    tz_id: &'de str,
+}
+
+impl<'de> LegacyDateTimeZoneId<'de> {
+    /// Seconds since Unix epoch in the timezone of this DateTime, e.g. 0 represents 1970-01-01T00:00:01 and 1 represents 1970-01-01T00:00:02.
+    pub fn seconds_since_epoch(self) -> i64 {
+        self.seconds
+    }
+
+    /// Nanoseconds since midnight in the timezone of this time, not in UTC.
+    pub fn nanoseconds_since_midnight(self) -> u32 {
+        self.nanoseconds
+    }
+
+    /// The timezone offset in seconds from UTC.
+    pub fn timezone_identifier(self) -> &'de str {
+        self.tz_id
+    }
+
+    /// The timezone offset in seconds from UTC according to the IANA Time Zone Database.
+    /// If the value could not be parsed or is unknown, None is returned.
+    pub fn timezone_offset_seconds(self) -> Option<i32> {
+        let tz = chrono_tz::Tz::from_str(self.tz_id).ok()?;
+        let offset =
+            chrono::TimeZone::offset_from_utc_datetime(&tz, &chrono::NaiveDateTime::UNIX_EPOCH);
+        let offset = chrono::Offset::fix(&offset);
+        Some(offset.local_minus_utc())
+    }
+
+    pub fn as_time_datetime(self) -> Option<time::OffsetDateTime> {
+        let offset = self.timezone_offset_seconds()?;
+        let (dt, tz) = convert_to_time_datetime(self.seconds, self.nanoseconds, offset)?;
+        Some(dt.replace_offset(tz))
+    }
+
+    pub fn as_chrono_datetime(self) -> Option<chrono::DateTime<chrono_tz::Tz>> {
+        let tz = chrono_tz::Tz::from_str(self.tz_id).ok()?;
+        let dt = chrono::DateTime::from_timestamp(self.seconds, self.nanoseconds)?;
+        chrono::TimeZone::from_local_datetime(&tz, &dt.naive_utc()).single()
+    }
+}
+
 fn convert_to_time_datetime(
     seconds: i64,
     nanoseconds: u32,
@@ -183,6 +231,7 @@ impl_visitor!(DateTime<'de>(seconds, nanoseconds, tz_offset_seconds { _de }) == 
 impl_visitor!(DateTimeZoneId<'de>(seconds, nanoseconds, tz_id) == 0x69);
 impl_visitor!(LocalDateTime<'de>(seconds, nanoseconds { _de }) == 0x64);
 impl_visitor!(LegacyDateTime<'de>(seconds, nanoseconds, tz_offset_seconds { _de }) == 0x46);
+impl_visitor!(LegacyDateTimeZoneId<'de>(seconds, nanoseconds, tz_id) == 0x66);
 
 impl<'de> Deserialize<'de> for DateTime<'de> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -217,6 +266,19 @@ impl<'de> Deserialize<'de> for LegacyDateTime<'de> {
         D: Deserializer<'de>,
     {
         deserializer.deserialize_struct("LegacyDateTime", &[], LegacyDateTime::visitor())
+    }
+}
+
+impl<'de> Deserialize<'de> for LegacyDateTimeZoneId<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_struct(
+            "LegacyDateTimeZoneId",
+            &[],
+            LegacyDateTimeZoneId::visitor(),
+        )
     }
 }
 
@@ -341,6 +403,39 @@ mod tests {
         assert_eq!(ch.second(), 0);
         assert_eq!(ch.nanosecond(), 42);
         assert_eq!(ch.timezone().local_minus_utc(), 3600);
+
+        let tm: time::OffsetDateTime = date.as_time_datetime().unwrap();
+        assert_eq!(tm.year(), 1970);
+        assert_eq!(tm.month(), time::Month::January);
+        assert_eq!(tm.day(), 1);
+        assert_eq!(tm.hour(), 2);
+        assert_eq!(tm.minute(), 15);
+        assert_eq!(tm.second(), 0);
+        assert_eq!(tm.nanosecond(), 42);
+        assert_eq!(tm.offset().as_hms(), (1, 0, 0));
+    }
+
+    #[test]
+    fn deserialize_legacy_datetime_zoneid() {
+        let data = bolt()
+            .structure(3, 0x66)
+            .int16(8100)
+            .tiny_int(42)
+            .tiny_string("Europe/Paris")
+            .build();
+        let mut data = Data::new(data);
+        let date: LegacyDateTimeZoneId = from_bytes_ref(&mut data).unwrap();
+
+        let ch: chrono::DateTime<chrono_tz::Tz> = date.as_chrono_datetime().unwrap();
+        assert_eq!(ch.year(), 1970);
+        assert_eq!(ch.month0(), 0);
+        assert_eq!(ch.day0(), 0);
+        assert_eq!(ch.hour(), 2);
+        assert_eq!(ch.minute(), 15);
+        assert_eq!(ch.second(), 0);
+        assert_eq!(ch.nanosecond(), 42);
+        assert_eq!(ch.timezone().name(), "Europe/Paris");
+        assert_eq!(ch.fixed_offset().timezone().local_minus_utc(), 3600);
 
         let tm: time::OffsetDateTime = date.as_time_datetime().unwrap();
         assert_eq!(tm.year(), 1970);
