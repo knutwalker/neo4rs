@@ -6,6 +6,7 @@ pub use self::datetime::{
 };
 pub use self::node::Node;
 pub use self::path::{Path, Segment};
+pub use self::point::{Point2D, Point3D};
 pub use self::rel::Relationship;
 pub use self::time::{LocalTime, Time};
 
@@ -14,6 +15,7 @@ mod datetime;
 mod de;
 mod node;
 mod path;
+mod point;
 mod rel;
 mod time;
 mod urel;
@@ -39,8 +41,8 @@ pub enum Bolt<'de> {
     DateTimeZoneId(DateTimeZoneId<'de>),
     LocalDateTime(LocalDateTime<'de>),
     // Duration,
-    // Point2D,
-    // Point3D,
+    Point2D(Point2D<'de>),
+    Point3D(Point3D<'de>),
     LegacyDateTime(LegacyDateTime<'de>),
     LegacyDateTimeZoneId(LegacyDateTimeZoneId<'de>),
 }
@@ -84,6 +86,8 @@ impl_from!(DateTimeZoneId(DateTimeZoneId<'de>));
 impl_from!(LocalDateTime(LocalDateTime<'de>));
 impl_from!(LegacyDateTime(LegacyDateTime<'de>));
 impl_from!(LegacyDateTimeZoneId(LegacyDateTimeZoneId<'de>));
+impl_from!(Point2D(Point2D<'de>));
+impl_from!(Point3D(Point3D<'de>));
 
 macro_rules! impl_try_from_int {
     ($($t:ty),*) => {

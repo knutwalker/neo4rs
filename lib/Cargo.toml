@@ -24,6 +24,7 @@ deadpool = "0.9.0"
 delegate = "0.10.0"
 futures = { version = "0.3.0" }
 log = "0.4"
+nav-types = "0.5.2"
 neo4rs-macros = { version = "0.3.0", path = "../macros" }
 paste = "1.0.0"
 pin-project-lite = "0.2.9"
