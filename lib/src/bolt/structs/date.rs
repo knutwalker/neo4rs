@@ -5,7 +5,7 @@ use serde::de::{Deserialize, Deserializer};
 use crate::bolt::structs::de::impl_visitor;
 
 /// A date without a time-zone in the ISO-8601 calendar system.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Date<'de> {
     days: i64,
     _de: PhantomData<&'de ()>,

@@ -5,7 +5,7 @@ use serde::de::{Deserialize, Deserializer};
 use crate::bolt::structs::de::impl_visitor;
 
 /// An instant capturing the time of day, and the timezone, but not the date.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Time<'de> {
     nanoseconds: u64,
     tz_offset_seconds: i32,

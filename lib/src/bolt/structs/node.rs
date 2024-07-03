@@ -9,7 +9,7 @@ use crate::bolt::{
 use super::de::{Keys, Single};
 
 /// A node within the graph.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Node<'de> {
     id: u64,
     labels: Vec<&'de str>,

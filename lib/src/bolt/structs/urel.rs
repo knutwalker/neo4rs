@@ -11,7 +11,7 @@ use super::de::{Keys, Single};
 
 /// An unbounded relationship within the graph.
 /// The difference to [`super::Relationship`] is that an unbounded relationship
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct UnboundRelationship<'de> {
     id: u64,
     r#type: &'de str,

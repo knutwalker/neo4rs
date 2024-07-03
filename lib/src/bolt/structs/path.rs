@@ -4,7 +4,7 @@ use crate::bolt::structs::de::impl_visitor;
 
 use super::{urel::UnboundRelationship, Node, Relationship};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Path<'de> {
     nodes: Vec<Node<'de>>,
     rels: Vec<UnboundRelationship<'de>>,

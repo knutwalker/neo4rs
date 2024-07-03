@@ -9,7 +9,7 @@ use crate::bolt::{
 use super::de::{Keys, Single};
 
 /// A relationship within the graph.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Relationship<'de> {
     id: u64,
     start_node_id: u64,
