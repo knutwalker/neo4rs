@@ -1,8 +1,6 @@
 use std::{marker::PhantomData, time::Duration};
 
-use chrono::FixedOffset;
 use serde::de::{Deserialize, Deserializer};
-use time::UtcOffset;
 
 use crate::bolt::structs::de::impl_visitor;
 
@@ -34,17 +32,17 @@ impl<'de> Time<'de> {
         Some(
             time::OffsetDateTime::from_unix_timestamp_nanos(self.nanoseconds.into())
                 .ok()?
-                .replace_offset(UtcOffset::from_whole_seconds(self.tz_offset_seconds).ok()?),
+                .replace_offset(time::UtcOffset::from_whole_seconds(self.tz_offset_seconds).ok()?),
         )
     }
 
-    pub fn as_chrono_time(self) -> Option<chrono::DateTime<FixedOffset>> {
+    pub fn as_chrono_time(self) -> Option<chrono::DateTime<chrono::FixedOffset>> {
         let time = chrono::NaiveTime::from_num_seconds_from_midnight_opt(
             u32::try_from(self.nanoseconds / 1_000_000_000).ok()?,
             u32::try_from(self.nanoseconds % 1_000_000_000).ok()?,
         )?;
         chrono::NaiveDateTime::new(chrono::NaiveDate::from_yo_opt(1970, 1).unwrap(), time)
-            .and_local_timezone(FixedOffset::east_opt(self.tz_offset_seconds)?)
+            .and_local_timezone(chrono::FixedOffset::east_opt(self.tz_offset_seconds)?)
             .single()
     }
 }
@@ -112,6 +110,7 @@ impl<'de> Deserialize<'de> for LocalTime<'de> {
 mod tests {
     use bytes::Bytes;
     use chrono::{Datelike, FixedOffset, Timelike};
+    use time::UtcOffset;
 
     use crate::bolt::{
         bolt,
