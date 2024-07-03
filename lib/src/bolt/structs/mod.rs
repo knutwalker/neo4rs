@@ -4,6 +4,7 @@ pub use self::date::{Date, DateDuration};
 pub use self::datetime::{
     DateTime, DateTimeZoneId, LegacyDateTime, LegacyDateTimeZoneId, LocalDateTime,
 };
+pub use self::duration::Duration;
 pub use self::node::Node;
 pub use self::path::{Path, Segment};
 pub use self::point::{Point2D, Point3D};
@@ -13,6 +14,7 @@ pub use self::time::{LocalTime, Time};
 mod date;
 mod datetime;
 mod de;
+mod duration;
 mod node;
 mod path;
 mod point;
@@ -40,7 +42,7 @@ pub enum Bolt<'de> {
     DateTime(DateTime<'de>),
     DateTimeZoneId(DateTimeZoneId<'de>),
     LocalDateTime(LocalDateTime<'de>),
-    // Duration,
+    Duration(Duration<'de>),
     Point2D(Point2D<'de>),
     Point3D(Point3D<'de>),
     LegacyDateTime(LegacyDateTime<'de>),
@@ -86,6 +88,7 @@ impl_from!(DateTimeZoneId(DateTimeZoneId<'de>));
 impl_from!(LocalDateTime(LocalDateTime<'de>));
 impl_from!(LegacyDateTime(LegacyDateTime<'de>));
 impl_from!(LegacyDateTimeZoneId(LegacyDateTimeZoneId<'de>));
+impl_from!(Duration(Duration<'de>));
 impl_from!(Point2D(Point2D<'de>));
 impl_from!(Point3D(Point3D<'de>));
 
