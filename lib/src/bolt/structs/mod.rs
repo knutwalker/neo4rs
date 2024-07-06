@@ -282,3 +282,159 @@ impl From<BoltRef<'_>> for Bolt {
         }
     }
 }
+
+impl From<Bolt> for crate::BoltType {
+    fn from(value: Bolt) -> Self {
+        use crate::{
+            BoltBoolean, BoltBytes, BoltDate, BoltDateTime, BoltDateTimeZoneId, BoltDuration,
+            BoltFloat, BoltInteger, BoltList, BoltLocalDateTime, BoltLocalTime, BoltNode, BoltNull,
+            BoltPath, BoltPoint2D, BoltPoint3D, BoltRelation, BoltString, BoltTime, BoltType,
+            BoltUnboundedRelation,
+        };
+
+        fn conv_unrel(rel: urel::UnboundRelationship) -> BoltUnboundedRelation {
+            let id = BoltInteger::new(rel.id().try_into().unwrap());
+            let typ = BoltString::from(rel.typ());
+            let properties = rel.into::<Bolt>().unwrap();
+            let properties = BoltType::from(properties);
+            let BoltType::Map(properties) = properties else {
+                panic!("properties should be a map");
+            };
+            BoltUnboundedRelation::new(id, typ, properties)
+        }
+
+        match value {
+            Bolt::Null => Self::Null(BoltNull),
+            Bolt::Boolean(v) => Self::Boolean(BoltBoolean { value: v }),
+            Bolt::Integer(v) => Self::Integer(BoltInteger { value: v }),
+            Bolt::Float(v) => Self::Float(BoltFloat { value: v }),
+            Bolt::Bytes(v) => Self::Bytes(BoltBytes { value: v }),
+            Bolt::String(v) => Self::String(BoltString::from(v)),
+            Bolt::List(v) => Self::List(BoltList::from(
+                v.into_iter().map(Into::into).collect::<Vec<_>>(),
+            )),
+            Bolt::Dictionary(v) => Self::Map(
+                v.into_iter()
+                    .map(|(k, v)| (BoltString::from(k), v.into()))
+                    .collect(),
+            ),
+            Bolt::Node(v) => {
+                let id = v.id();
+                let labels = v
+                    .labels()
+                    .iter()
+                    .cloned()
+                    .map(BoltType::from)
+                    .collect::<Vec<_>>();
+                let properties = v.into::<Bolt>().unwrap();
+                let properties = BoltType::from(properties);
+                let BoltType::Map(properties) = properties else {
+                    panic!("properties should be a map");
+                };
+                Self::Node(BoltNode::new(
+                    BoltInteger::new(id.try_into().unwrap()),
+                    BoltList::from(labels),
+                    properties,
+                ))
+            }
+            Bolt::Relationship(v) => {
+                let id = v.id();
+                let start_node_id = v.start_node_id();
+                let end_node_id = v.end_node_id();
+                let typ = BoltString::from(v.typ());
+                let properties = v.into::<Bolt>().unwrap();
+                let properties = BoltType::from(properties);
+                let BoltType::Map(properties) = properties else {
+                    panic!("properties should be a map");
+                };
+                Self::Relation(BoltRelation {
+                    id: BoltInteger::new(id.try_into().unwrap()),
+                    start_node_id: BoltInteger::new(start_node_id.try_into().unwrap()),
+                    end_node_id: BoltInteger::new(end_node_id.try_into().unwrap()),
+                    typ,
+                    properties,
+                })
+            }
+            Bolt::Path(v) => {
+                let nodes = BoltList::from(
+                    v.nodes
+                        .into_iter()
+                        .map(Bolt::from)
+                        .map(BoltType::from)
+                        .collect::<Vec<_>>(),
+                );
+                let rels = BoltList::from(
+                    v.rels
+                        .into_iter()
+                        .map(conv_unrel)
+                        .map(BoltType::from)
+                        .collect::<Vec<_>>(),
+                );
+                let indices = BoltList::from(
+                    v.indices
+                        .into_iter()
+                        .map(|i| i64::try_from(i).unwrap())
+                        .map(Bolt::from)
+                        .map(BoltType::from)
+                        .collect::<Vec<_>>(),
+                );
+                Self::Path(BoltPath {
+                    nodes,
+                    rels,
+                    indices,
+                })
+            }
+            Bolt::Date(v) => Self::Date(BoltDate {
+                days: v.days().into(),
+            }),
+            Bolt::Time(v) => Self::Time(BoltTime {
+                nanoseconds: BoltInteger::new(v.nanoseconds_since_midnight().try_into().unwrap()),
+                tz_offset_seconds: v.timezone_offset_seconds().into(),
+            }),
+            Bolt::LocalTime(v) => Self::LocalTime(BoltLocalTime {
+                nanoseconds: BoltInteger::new(v.nanoseconds_since_midnight().try_into().unwrap()),
+            }),
+            Bolt::DateTime(v) => Self::DateTime(BoltDateTime {
+                seconds: v.seconds_since_epoch().into(),
+                nanoseconds: BoltInteger::new(v.nanoseconds().into()),
+                tz_offset_seconds: v.timezone_offset_seconds().into(),
+            }),
+            Bolt::DateTimeZoneId(v) => Self::DateTimeZoneId(BoltDateTimeZoneId {
+                seconds: v.seconds_since_epoch().into(),
+                nanoseconds: BoltInteger::new(v.nanoseconds().into()),
+                tz_id: v.timezone_identifier().into(),
+            }),
+            Bolt::LocalDateTime(v) => Self::LocalDateTime(BoltLocalDateTime {
+                seconds: v.seconds_since_epoch().into(),
+                nanoseconds: BoltInteger::new(v.nanoseconds().into()),
+            }),
+            Bolt::Duration(v) => Self::Duration(BoltDuration::new(
+                v.months().into(),
+                v.days().into(),
+                v.seconds().into(),
+                v.nanoseconds().into(),
+            )),
+            Bolt::Point2D(v) => Self::Point2D(BoltPoint2D {
+                sr_id: BoltInteger::new(v.srid().to_srid().into()),
+                x: BoltFloat::new(v.x()),
+                y: BoltFloat::new(v.y()),
+            }),
+            Bolt::Point3D(v) => Self::Point3D(BoltPoint3D {
+                sr_id: BoltInteger::new(v.srid().to_srid().into()),
+                x: BoltFloat::new(v.x()),
+                y: BoltFloat::new(v.y()),
+                z: BoltFloat::new(v.z()),
+            }),
+            Bolt::LegacyDateTime(v) => Self::DateTime(BoltDateTime {
+                seconds: v.seconds_since_epoch().into(),
+                nanoseconds: BoltInteger::new(v.nanoseconds().into()),
+                tz_offset_seconds: v.timezone_offset_seconds().into(),
+            }),
+            Bolt::LegacyDateTimeZoneId(v) => Self::DateTimeZoneId(BoltDateTimeZoneId {
+                seconds: v.seconds_since_epoch().into(),
+                nanoseconds: BoltInteger::new(v.nanoseconds().into()),
+                tz_id: v.timezone_identifier().into(),
+            }),
+        }
+    }
+}
