@@ -1,4 +1,3 @@
-use bytes::Bytes;
 use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 
 use crate::bolt::{de, from_bytes, from_bytes_ref, from_bytes_seed, Data};
@@ -96,41 +95,17 @@ impl<'de> RelationshipRef<'de> {
 }
 
 impl<'de> RelationshipRef<'de> {
-    fn new(
-        id: u64,
-        start_node_id: u64,
-        end_node_id: u64,
-        r#type: &'de str,
-        properties: impl Into<Bytes>,
-        element_id: impl Into<Option<&'de str>>,
-        start_node_element_id: impl Into<Option<&'de str>>,
-        end_node_element_id: impl Into<Option<&'de str>>,
-    ) -> Self {
-        let properties = Data::new(properties.into());
-        let element_id = element_id.into();
-        let start_node_element_id = start_node_element_id.into();
-        let end_node_element_id = end_node_element_id.into();
-        Self {
-            id,
-            start_node_id,
-            end_node_id,
-            r#type,
-            properties,
-            element_id,
-            start_node_element_id,
-            end_node_element_id,
-        }
-    }
-
     pub(crate) fn from_other_rel(
         id: u64,
-        element_id: Option<&'de str>,
         start_node_id: u64,
-        start_node_element_id: Option<&'de str>,
         end_node_id: u64,
-        end_node_element_id: Option<&'de str>,
         r#type: &'de str,
         properties: Data,
+        (element_id, start_node_element_id, end_node_element_id): (
+            Option<&'de str>,
+            Option<&'de str>,
+            Option<&'de str>,
+        ),
     ) -> Self {
         Self {
             id,
@@ -160,6 +135,7 @@ impl<'de> Deserialize<'de> for RelationshipRef<'de> {
 mod tests {
     use std::borrow::Cow;
 
+    use bytes::Bytes;
     use serde::Deserialize;
     use serde_test::{assert_de_tokens, Token};
     use test_case::{test_case, test_matrix};
@@ -185,16 +161,16 @@ mod tests {
     #[test_case(tokens_v5())]
     #[test_case(tagged_tokens_v5())]
     fn tokens((tokens, element_ids): (Vec<Token>, Option<ElementIds<'static>>)) {
-        let rel = RelationshipRef::new(
-            42,
-            84,
-            1337,
-            "REL",
-            properties_data(),
-            element_ids.as_ref().map(|o| o.id),
-            element_ids.as_ref().map(|o| o.start_node),
-            element_ids.as_ref().map(|o| o.end_node),
-        );
+        let rel = RelationshipRef {
+            id: 42,
+            start_node_id: 84,
+            end_node_id: 1337,
+            r#type: "REL",
+            properties: Data::new(properties_data()),
+            element_id: element_ids.as_ref().map(|o| o.id),
+            start_node_element_id: element_ids.as_ref().map(|o| o.start_node),
+            end_node_element_id: element_ids.as_ref().map(|o| o.end_node),
+        };
 
         assert_de_tokens(&rel, &tokens);
     }

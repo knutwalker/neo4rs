@@ -2,10 +2,11 @@ use std::collections::HashMap;
 
 pub use self::date::{Date, DateDuration};
 pub use self::datetime::{
-    DateTime, DateTimeZoneIdRef, LegacyDateTime, LegacyDateTimeZoneIdRef, LocalDateTime,
+    DateTime, DateTimeZoneId, DateTimeZoneIdRef, LegacyDateTime, LegacyDateTimeZoneId,
+    LegacyDateTimeZoneIdRef, LocalDateTime,
 };
 pub use self::duration::Duration;
-pub use self::node::NodeRef;
+pub use self::node::{Node, NodeRef};
 pub use self::path::{PathRef, Segment};
 pub use self::point::{Point2D, Point3D};
 pub use self::rel::RelationshipRef;

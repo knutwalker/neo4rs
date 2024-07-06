@@ -14,27 +14,27 @@ pub struct DateTime {
 
 impl DateTime {
     /// Seconds since Unix epoch in UTC, e.g. 0 represents 1970-01-01T00:00:01 and 1 represents 1970-01-01T00:00:02.
-    pub fn seconds_since_epoch(self) -> i64 {
+    pub fn seconds_since_epoch(&self) -> i64 {
         self.seconds
     }
 
     /// Nanoseconds since midnight in the timezone of this time, not in UTC.
-    pub fn nanoseconds_since_midnight(self) -> u32 {
+    pub fn nanoseconds_since_midnight(&self) -> u32 {
         self.nanoseconds
     }
 
     /// The timezone offset in seconds from UTC.
-    pub fn timezone_offset_seconds(self) -> i32 {
+    pub fn timezone_offset_seconds(&self) -> i32 {
         self.tz_offset_seconds
     }
 
-    pub fn as_time_datetime(self) -> Option<time::OffsetDateTime> {
+    pub fn as_time_datetime(&self) -> Option<time::OffsetDateTime> {
         let (dt, tz) =
             convert_to_time_datetime(self.seconds, self.nanoseconds, self.tz_offset_seconds)?;
         dt.checked_to_offset(tz)
     }
 
-    pub fn as_chrono_datetime(self) -> Option<chrono::DateTime<chrono::FixedOffset>> {
+    pub fn as_chrono_datetime(&self) -> Option<chrono::DateTime<chrono::FixedOffset>> {
         let (dt, tz) =
             convert_to_chrono_datetime(self.seconds, self.nanoseconds, self.tz_offset_seconds)?;
         Some(dt.with_timezone(&tz))
@@ -52,23 +52,23 @@ pub struct DateTimeZoneIdRef<'de> {
 
 impl<'de> DateTimeZoneIdRef<'de> {
     /// Seconds since Unix epoch in UTC, e.g. 0 represents 1970-01-01T00:00:01 and 1 represents 1970-01-01T00:00:02.
-    pub fn seconds_since_epoch(self) -> i64 {
+    pub fn seconds_since_epoch(&self) -> i64 {
         self.seconds
     }
 
     /// Nanoseconds since midnight in the timezone of this time, not in UTC.
-    pub fn nanoseconds_since_midnight(self) -> u32 {
+    pub fn nanoseconds_since_midnight(&self) -> u32 {
         self.nanoseconds
     }
 
     /// The timezone offset in seconds from UTC.
-    pub fn timezone_identifier(self) -> &'de str {
+    pub fn timezone_identifier(&self) -> &'de str {
         self.tz_id
     }
 
     /// The timezone offset in seconds from UTC according to the IANA Time Zone Database.
     /// If the value could not be parsed or is unknown, None is returned.
-    pub fn timezone_offset_seconds(self) -> Option<i32> {
+    pub fn timezone_offset_seconds(&self) -> Option<i32> {
         let tz = chrono_tz::Tz::from_str(self.tz_id).ok()?;
         let offset =
             chrono::TimeZone::offset_from_utc_datetime(&tz, &chrono::NaiveDateTime::UNIX_EPOCH);
@@ -76,13 +76,13 @@ impl<'de> DateTimeZoneIdRef<'de> {
         Some(offset.local_minus_utc())
     }
 
-    pub fn as_time_datetime(self) -> Option<time::OffsetDateTime> {
+    pub fn as_time_datetime(&self) -> Option<time::OffsetDateTime> {
         let offset = self.timezone_offset_seconds()?;
         let (dt, tz) = convert_to_time_datetime(self.seconds, self.nanoseconds, offset)?;
         dt.checked_to_offset(tz)
     }
 
-    pub fn as_chrono_datetime(self) -> Option<chrono::DateTime<chrono_tz::Tz>> {
+    pub fn as_chrono_datetime(&self) -> Option<chrono::DateTime<chrono_tz::Tz>> {
         let tz = chrono_tz::Tz::from_str(self.tz_id).ok()?;
         let datetime = chrono::DateTime::from_timestamp(self.seconds, self.nanoseconds)?;
         Some(datetime.with_timezone(&tz))
@@ -98,21 +98,21 @@ pub struct LocalDateTime {
 
 impl LocalDateTime {
     /// Seconds since Unix epoch, e.g. 0 represents 1970-01-01T00:00:01 and 1 represents 1970-01-01T00:00:02.
-    pub fn seconds_since_epoch(self) -> i64 {
+    pub fn seconds_since_epoch(&self) -> i64 {
         self.seconds
     }
 
     /// Nanoseconds since midnight in the timezone of this time, not in UTC.
-    pub fn nanoseconds_since_midnight(self) -> u32 {
+    pub fn nanoseconds_since_midnight(&self) -> u32 {
         self.nanoseconds
     }
 
-    pub fn as_time_datetime(self) -> Option<time::PrimitiveDateTime> {
+    pub fn as_time_datetime(&self) -> Option<time::PrimitiveDateTime> {
         let (dt, _tz) = convert_to_time_datetime(self.seconds, self.nanoseconds, 0)?;
         Some(time::PrimitiveDateTime::new(dt.date(), dt.time()))
     }
 
-    pub fn as_chrono_datetime(self) -> Option<chrono::NaiveDateTime> {
+    pub fn as_chrono_datetime(&self) -> Option<chrono::NaiveDateTime> {
         let (dt, _tz) = convert_to_chrono_datetime(self.seconds, self.nanoseconds, 0)?;
         Some(dt.naive_utc())
     }
@@ -127,27 +127,27 @@ pub struct LegacyDateTime {
 
 impl LegacyDateTime {
     /// Seconds since Unix epoch in the timezone of this DateTime, e.g. 0 represents 1970-01-01T00:00:01 and 1 represents 1970-01-01T00:00:02.
-    pub fn seconds_since_epoch(self) -> i64 {
+    pub fn seconds_since_epoch(&self) -> i64 {
         self.seconds
     }
 
     /// Nanoseconds since midnight in the timezone of this time, not in UTC.
-    pub fn nanoseconds_since_midnight(self) -> u32 {
+    pub fn nanoseconds_since_midnight(&self) -> u32 {
         self.nanoseconds
     }
 
     /// The timezone offset in seconds from UTC.
-    pub fn timezone_offset_seconds(self) -> i32 {
+    pub fn timezone_offset_seconds(&self) -> i32 {
         self.tz_offset_seconds
     }
 
-    pub fn as_time_datetime(self) -> Option<time::OffsetDateTime> {
+    pub fn as_time_datetime(&self) -> Option<time::OffsetDateTime> {
         let (dt, tz) =
             convert_to_time_datetime(self.seconds, self.nanoseconds, self.tz_offset_seconds)?;
         Some(dt.replace_offset(tz))
     }
 
-    pub fn as_chrono_datetime(self) -> Option<chrono::DateTime<chrono::FixedOffset>> {
+    pub fn as_chrono_datetime(&self) -> Option<chrono::DateTime<chrono::FixedOffset>> {
         let (dt, tz) =
             convert_to_chrono_datetime(self.seconds, self.nanoseconds, self.tz_offset_seconds)?;
         chrono::TimeZone::from_local_datetime(&tz, &dt.naive_utc()).single()
@@ -165,23 +165,23 @@ pub struct LegacyDateTimeZoneIdRef<'de> {
 
 impl<'de> LegacyDateTimeZoneIdRef<'de> {
     /// Seconds since Unix epoch in the timezone of this DateTime, e.g. 0 represents 1970-01-01T00:00:01 and 1 represents 1970-01-01T00:00:02.
-    pub fn seconds_since_epoch(self) -> i64 {
+    pub fn seconds_since_epoch(&self) -> i64 {
         self.seconds
     }
 
     /// Nanoseconds since midnight in the timezone of this time, not in UTC.
-    pub fn nanoseconds_since_midnight(self) -> u32 {
+    pub fn nanoseconds_since_midnight(&self) -> u32 {
         self.nanoseconds
     }
 
     /// The timezone offset in seconds from UTC.
-    pub fn timezone_identifier(self) -> &'de str {
+    pub fn timezone_identifier(&self) -> &'de str {
         self.tz_id
     }
 
     /// The timezone offset in seconds from UTC according to the IANA Time Zone Database.
     /// If the value could not be parsed or is unknown, None is returned.
-    pub fn timezone_offset_seconds(self) -> Option<i32> {
+    pub fn timezone_offset_seconds(&self) -> Option<i32> {
         let tz = chrono_tz::Tz::from_str(self.tz_id).ok()?;
         let offset =
             chrono::TimeZone::offset_from_utc_datetime(&tz, &chrono::NaiveDateTime::UNIX_EPOCH);
@@ -189,13 +189,13 @@ impl<'de> LegacyDateTimeZoneIdRef<'de> {
         Some(offset.local_minus_utc())
     }
 
-    pub fn as_time_datetime(self) -> Option<time::OffsetDateTime> {
+    pub fn as_time_datetime(&self) -> Option<time::OffsetDateTime> {
         let offset = self.timezone_offset_seconds()?;
         let (dt, tz) = convert_to_time_datetime(self.seconds, self.nanoseconds, offset)?;
         Some(dt.replace_offset(tz))
     }
 
-    pub fn as_chrono_datetime(self) -> Option<chrono::DateTime<chrono_tz::Tz>> {
+    pub fn as_chrono_datetime(&self) -> Option<chrono::DateTime<chrono_tz::Tz>> {
         let tz = chrono_tz::Tz::from_str(self.tz_id).ok()?;
         let dt = chrono::DateTime::from_timestamp(self.seconds, self.nanoseconds)?;
         chrono::TimeZone::from_local_datetime(&tz, &dt.naive_utc()).single()
@@ -276,6 +276,102 @@ impl<'de> Deserialize<'de> for LegacyDateTimeZoneIdRef<'de> {
             &[],
             LegacyDateTimeZoneIdRef::visitor(),
         )
+    }
+}
+
+/// An instant capturing the date, the time, and the time zone specified with a timezone
+/// iddentifier.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DateTimeZoneId {
+    seconds: i64,
+    nanoseconds: u32,
+    tz_id: String,
+}
+
+impl DateTimeZoneId {
+    /// Seconds since Unix epoch in UTC, e.g. 0 represents 1970-01-01T00:00:01 and 1 represents 1970-01-01T00:00:02.
+    pub fn seconds_since_epoch(&self) -> i64 {
+        self.seconds
+    }
+
+    /// Nanoseconds since midnight in the timezone of this time, not in UTC.
+    pub fn nanoseconds_since_midnight(&self) -> u32 {
+        self.nanoseconds
+    }
+
+    /// The timezone offset in seconds from UTC.
+    pub fn timezone_identifier(&self) -> &str {
+        &self.tz_id
+    }
+
+    /// The timezone offset in seconds from UTC according to the IANA Time Zone Database.
+    /// If the value could not be parsed or is unknown, None is returned.
+    pub fn timezone_offset_seconds(&self) -> Option<i32> {
+        let tz = chrono_tz::Tz::from_str(&self.tz_id).ok()?;
+        let offset =
+            chrono::TimeZone::offset_from_utc_datetime(&tz, &chrono::NaiveDateTime::UNIX_EPOCH);
+        let offset = chrono::Offset::fix(&offset);
+        Some(offset.local_minus_utc())
+    }
+
+    pub fn as_time_datetime(&self) -> Option<time::OffsetDateTime> {
+        let offset = self.timezone_offset_seconds()?;
+        let (dt, tz) = convert_to_time_datetime(self.seconds, self.nanoseconds, offset)?;
+        dt.checked_to_offset(tz)
+    }
+
+    pub fn as_chrono_datetime(&self) -> Option<chrono::DateTime<chrono_tz::Tz>> {
+        let tz = chrono_tz::Tz::from_str(&self.tz_id).ok()?;
+        let datetime = chrono::DateTime::from_timestamp(self.seconds, self.nanoseconds)?;
+        Some(datetime.with_timezone(&tz))
+    }
+}
+
+/// An instant capturing the date, the time, and the time zone specified with a timezone
+/// iddentifier.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LegacyDateTimeZoneId {
+    seconds: i64,
+    nanoseconds: u32,
+    tz_id: String,
+}
+
+impl LegacyDateTimeZoneId {
+    /// Seconds since Unix epoch in the timezone of this DateTime, e.g. 0 represents 1970-01-01T00:00:01 and 1 represents 1970-01-01T00:00:02.
+    pub fn seconds_since_epoch(&self) -> i64 {
+        self.seconds
+    }
+
+    /// Nanoseconds since midnight in the timezone of this time, not in UTC.
+    pub fn nanoseconds_since_midnight(&self) -> u32 {
+        self.nanoseconds
+    }
+
+    /// The timezone offset in seconds from UTC.
+    pub fn timezone_identifier(&self) -> &str {
+        &self.tz_id
+    }
+
+    /// The timezone offset in seconds from UTC according to the IANA Time Zone Database.
+    /// If the value could not be parsed or is unknown, None is returned.
+    pub fn timezone_offset_seconds(&self) -> Option<i32> {
+        let tz = chrono_tz::Tz::from_str(&self.tz_id).ok()?;
+        let offset =
+            chrono::TimeZone::offset_from_utc_datetime(&tz, &chrono::NaiveDateTime::UNIX_EPOCH);
+        let offset = chrono::Offset::fix(&offset);
+        Some(offset.local_minus_utc())
+    }
+
+    pub fn as_time_datetime(&self) -> Option<time::OffsetDateTime> {
+        let offset = self.timezone_offset_seconds()?;
+        let (dt, tz) = convert_to_time_datetime(self.seconds, self.nanoseconds, offset)?;
+        Some(dt.replace_offset(tz))
+    }
+
+    pub fn as_chrono_datetime(&self) -> Option<chrono::DateTime<chrono_tz::Tz>> {
+        let tz = chrono_tz::Tz::from_str(&self.tz_id).ok()?;
+        let dt = chrono::DateTime::from_timestamp(self.seconds, self.nanoseconds)?;
+        chrono::TimeZone::from_local_datetime(&tz, &dt.naive_utc()).single()
     }
 }
 

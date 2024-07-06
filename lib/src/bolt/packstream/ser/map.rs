@@ -118,9 +118,9 @@ impl<S: Serializer> Serializer for AsMapSerializer<S> {
         Err(Self::Error::custom("not a valid map entry: bytes"))
     }
 
-    fn serialize_some<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_some<T>(self, value: &T) -> Result<Self::Ok, Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         value.serialize(self)
     }
@@ -146,18 +146,18 @@ impl<S: Serializer> Serializer for AsMapSerializer<S> {
         self.inner.serialize_map(Some(0))?.end()
     }
 
-    fn serialize_newtype_struct<T: ?Sized>(
+    fn serialize_newtype_struct<T>(
         self,
         _name: &'static str,
         value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         value.serialize(self)
     }
 
-    fn serialize_newtype_variant<T: ?Sized>(
+    fn serialize_newtype_variant<T>(
         self,
         _name: &'static str,
         _variant_index: u32,
@@ -165,7 +165,7 @@ impl<S: Serializer> Serializer for AsMapSerializer<S> {
         value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         value.serialize(self)
     }
@@ -248,9 +248,9 @@ impl<S: SerializeMap> SerializeSeq for OuterMapSerializer<S> {
     type Ok = S::Ok;
     type Error = S::Error;
 
-    fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    fn serialize_element<T>(&mut self, value: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         SerializeSeq::serialize_element(&mut &mut self.inner, value)
     }
@@ -264,9 +264,9 @@ impl<S: SerializeMap> SerializeTuple for OuterMapSerializer<S> {
     type Ok = S::Ok;
     type Error = S::Error;
 
-    fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    fn serialize_element<T>(&mut self, value: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         SerializeTuple::serialize_element(&mut &mut self.inner, value)
     }
@@ -280,9 +280,9 @@ impl<S: SerializeMap> SerializeTupleStruct for OuterMapSerializer<S> {
     type Ok = S::Ok;
     type Error = S::Error;
 
-    fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    fn serialize_field<T>(&mut self, value: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         SerializeTupleStruct::serialize_field(&mut &mut self.inner, value)
     }
@@ -296,9 +296,9 @@ impl<S: SerializeMap> SerializeTupleVariant for OuterMapSerializer<S> {
     type Ok = S::Ok;
     type Error = S::Error;
 
-    fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    fn serialize_field<T>(&mut self, value: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         SerializeTupleVariant::serialize_field(&mut &mut self.inner, value)
     }
@@ -348,9 +348,9 @@ impl<S: SerializeMap> InnerMapSerializer<S> {
         Ok(())
     }
 
-    fn key<T: ?Sized>(&mut self, key: &T) -> Result<(), S::Error>
+    fn key<T>(&mut self, key: &T) -> Result<(), S::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         if !self.expect_key {
             return Err(SerError::custom("MapValueNotString"));
@@ -361,9 +361,9 @@ impl<S: SerializeMap> InnerMapSerializer<S> {
         Ok(())
     }
 
-    fn value<T: ?Sized>(&mut self, value: &T) -> Result<(), S::Error>
+    fn value<T>(&mut self, value: &T) -> Result<(), S::Error>
     where
-        T: Serialize + Debug,
+        T: Serialize + Debug + ?Sized,
     {
         if self.expect_key {
             return Err(SerError::custom(format!("MapKeyNotString: {:?}", value)));
@@ -443,9 +443,9 @@ impl<'a, S: SerializeMap> Serializer for &'a mut InnerMapSerializer<S> {
         self.value(v)
     }
 
-    fn serialize_some<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_some<T>(self, value: &T) -> Result<Self::Ok, Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         value.serialize(self)
     }
@@ -471,18 +471,18 @@ impl<'a, S: SerializeMap> Serializer for &'a mut InnerMapSerializer<S> {
         Ok(())
     }
 
-    fn serialize_newtype_struct<T: ?Sized>(
+    fn serialize_newtype_struct<T>(
         self,
         _name: &'static str,
         value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         value.serialize(self)
     }
 
-    fn serialize_newtype_variant<T: ?Sized>(
+    fn serialize_newtype_variant<T>(
         self,
         _name: &'static str,
         _variant_index: u32,
@@ -490,7 +490,7 @@ impl<'a, S: SerializeMap> Serializer for &'a mut InnerMapSerializer<S> {
         value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         value.serialize(self)
     }
@@ -576,9 +576,9 @@ impl<'a, S: SerializeMap> SerializeSeq for &'a mut InnerMapSerializer<S> {
     type Ok = ();
     type Error = S::Error;
 
-    fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    fn serialize_element<T>(&mut self, value: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         value.serialize(&mut **self)?;
         Ok(())
@@ -610,9 +610,9 @@ impl<'a, S: SerializeMap> SerializeTuple for &'a mut InnerMapSerializer<S> {
     type Ok = ();
     type Error = S::Error;
 
-    fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    fn serialize_element<T>(&mut self, value: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         value.serialize(&mut **self)?;
         Ok(())
@@ -644,9 +644,9 @@ impl<'a, S: SerializeMap> SerializeTupleStruct for &'a mut InnerMapSerializer<S>
     type Ok = ();
     type Error = S::Error;
 
-    fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    fn serialize_field<T>(&mut self, value: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         value.serialize(&mut **self)?;
         Ok(())
@@ -686,17 +686,17 @@ impl<'a, S: SerializeMap> SerializeMap for &'a mut InnerMapSerializer<S> {
     type Ok = ();
     type Error = S::Error;
 
-    fn serialize_key<T: ?Sized>(&mut self, key: &T) -> Result<(), Self::Error>
+    fn serialize_key<T>(&mut self, key: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         key.serialize(&mut **self)?;
         Ok(())
     }
 
-    fn serialize_value<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    fn serialize_value<T>(&mut self, value: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         value.serialize(&mut **self)?;
         Ok(())
@@ -729,9 +729,9 @@ impl<'a, S: SerializeMap> SerializeTupleVariant for &'a mut InnerMapSerializer<S
     type Ok = ();
     type Error = S::Error;
 
-    fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    fn serialize_field<T>(&mut self, value: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         value.serialize(&mut **self)?;
         Ok(())
@@ -766,13 +766,9 @@ impl<'a, S: SerializeMap> SerializeStruct for &'a mut InnerMapSerializer<S> {
     type Ok = ();
     type Error = S::Error;
 
-    fn serialize_field<T: ?Sized>(
-        &mut self,
-        _key: &'static str,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_field<T>(&mut self, _key: &'static str, value: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         value.serialize(&mut **self)
     }
@@ -806,13 +802,9 @@ impl<'a, S: SerializeMap> SerializeStructVariant for &'a mut InnerMapSerializer<
     type Ok = ();
     type Error = S::Error;
 
-    fn serialize_field<T: ?Sized>(
-        &mut self,
-        _key: &'static str,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_field<T>(&mut self, _key: &'static str, value: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         value.serialize(&mut **self)
     }
@@ -830,16 +822,16 @@ impl<S: SerializeMap> SerializeMap for ForwardingSerializer<S> {
     type Ok = S::Ok;
     type Error = S::Error;
 
-    fn serialize_key<T: ?Sized>(&mut self, key: &T) -> Result<(), Self::Error>
+    fn serialize_key<T>(&mut self, key: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         self.inner.serialize_key(key)
     }
 
-    fn serialize_value<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    fn serialize_value<T>(&mut self, value: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         self.inner.serialize_value(value)
     }
@@ -853,13 +845,9 @@ impl<S: SerializeStruct> SerializeStruct for ForwardingSerializer<S> {
     type Ok = S::Ok;
     type Error = S::Error;
 
-    fn serialize_field<T: ?Sized>(
-        &mut self,
-        key: &'static str,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         self.inner.serialize_field(key, value)
     }
@@ -873,13 +861,9 @@ impl<S: SerializeStructVariant> SerializeStructVariant for ForwardingSerializer<
     type Ok = S::Ok;
     type Error = S::Error;
 
-    fn serialize_field<T: ?Sized>(
-        &mut self,
-        key: &'static str,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: Serialize + ?Sized,
     {
         self.inner.serialize_field(key, value)
     }

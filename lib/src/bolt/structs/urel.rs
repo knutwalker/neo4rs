@@ -1,4 +1,3 @@
-use bytes::Bytes;
 use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 
 use crate::bolt::{de, from_bytes, from_bytes_ref, from_bytes_seed, Data, RelationshipRef};
@@ -82,13 +81,11 @@ impl<'de> UnboundRelationshipRef<'de> {
     ) -> super::RelationshipRef<'de> {
         RelationshipRef::from_other_rel(
             self.id,
-            self.element_id,
             start_node_id,
-            start_node_element_id,
             end_node_id,
-            end_node_element_id,
             self.r#type,
             self.properties.clone(),
+            (self.element_id, start_node_element_id, end_node_element_id),
         )
     }
 }
@@ -108,6 +105,7 @@ impl<'de> Deserialize<'de> for UnboundRelationshipRef<'de> {
 mod tests {
     use std::borrow::Cow;
 
+    use bytes::Bytes;
     use serde::Deserialize;
     use serde_test::{assert_de_tokens, Token};
     use test_case::{test_case, test_matrix};

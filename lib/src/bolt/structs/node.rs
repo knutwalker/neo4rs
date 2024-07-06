@@ -1,4 +1,3 @@
-use bytes::Bytes;
 use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 
 use crate::bolt::{de, from_bytes, from_bytes_ref, from_bytes_seed, Data};
@@ -69,23 +68,22 @@ impl<'de> NodeRef<'de> {
     pub fn into<T: DeserializeOwned>(self) -> Result<T, de::Error> {
         from_bytes(self.properties.into_inner())
     }
-}
 
-impl<'de> NodeRef<'de> {
-    fn new(
-        id: u64,
-        labels: impl IntoIterator<Item = &'de str>,
-        properties: impl Into<Bytes>,
-        element_id: impl Into<Option<&'de str>>,
-    ) -> Self {
-        let labels = labels.into_iter().collect();
-        let properties = Data::new(properties.into());
-        let element_id = element_id.into();
-        Self {
-            id,
-            labels,
-            properties,
-            element_id,
+    pub fn to_owned(&self) -> Node {
+        Node {
+            id: self.id,
+            labels: self.labels.iter().copied().map(ToOwned::to_owned).collect(),
+            properties: self.properties.clone(),
+            element_id: self.element_id.map(ToOwned::to_owned),
+        }
+    }
+
+    pub fn into_owned(self) -> Node {
+        Node {
+            id: self.id,
+            labels: self.labels.into_iter().map(ToOwned::to_owned).collect(),
+            properties: self.properties,
+            element_id: self.element_id.map(ToOwned::to_owned),
         }
     }
 }
@@ -101,10 +99,80 @@ impl<'de> Deserialize<'de> for NodeRef<'de> {
     }
 }
 
+/// A node within the graph.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Node {
+    id: u64,
+    labels: Vec<String>,
+    properties: Data,
+    element_id: Option<String>,
+}
+
+impl Node {
+    /// An id for this node.
+    ///
+    /// Ids are guaranteed to remain stable for the duration of the session
+    /// they were found in, but may be re-used for other entities after that.
+    /// As such, if you want a public identity to use for your entities,
+    /// attaching an explicit 'id' property or similar persistent
+    /// and unique identifier is a better choice.
+    pub fn id(&self) -> u64 {
+        self.id
+    }
+
+    /// A unique id for this Node.
+    ///
+    /// It is recommended to attach an explicit 'id' property or similar
+    /// persistent and unique identifier if you want a public identity
+    /// to use for your entities.
+    pub fn element_id(&self) -> Option<&str> {
+        self.element_id.as_deref()
+    }
+
+    /// Return all labels.
+    pub fn labels(&self) -> &[String] {
+        &self.labels
+    }
+
+    /// Get the names of the properties of this node
+    pub fn keys(&mut self) -> Vec<&str> {
+        self.to::<Keys>().expect("properties should be a map").0
+    }
+
+    /// Get an attribute of this node and deserialize it into custom type that implements [`serde::Deserialize`]
+    pub fn get<'this, T: Deserialize<'this> + 'this>(
+        &'this mut self,
+        key: &str,
+    ) -> Result<Option<T>, de::Error> {
+        self.properties.reset();
+        from_bytes_seed(&mut self.properties, Single::new(key))
+    }
+
+    /// Deserialize the node to a type that implements [`serde::Deserialize`].
+    /// The target type may borrow data from the node's properties.
+    pub fn to<'this, T: Deserialize<'this> + 'this>(&'this mut self) -> Result<T, de::Error> {
+        self.properties.reset();
+        from_bytes_ref(&mut self.properties)
+    }
+
+    /// Convert the node into a type that implements [`serde::Deserialize`].
+    /// The target type must not borrow data from the node's properties.
+    pub fn into<T: DeserializeOwned>(self) -> Result<T, de::Error> {
+        from_bytes(self.properties.into_inner())
+    }
+}
+
+impl From<NodeRef<'_>> for Node {
+    fn from(node: NodeRef<'_>) -> Self {
+        node.into_owned()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::borrow::Cow;
 
+    use bytes::Bytes;
     use serde::Deserialize;
     use serde_test::{assert_de_tokens, Token};
     use test_case::{test_case, test_matrix};
@@ -130,9 +198,14 @@ mod tests {
     #[test_case(tokens_v5())]
     #[test_case(tagged_tokens_v5())]
     fn tokens((tokens, element_id): (Vec<Token>, Option<&str>)) {
-        let rel = NodeRef::new(42, ["Label"], properties_data(), element_id);
+        let node = NodeRef {
+            id: 42,
+            labels: vec!["Label"],
+            properties: Data::new(properties_data()),
+            element_id,
+        };
 
-        assert_de_tokens(&rel, &tokens);
+        assert_de_tokens(&node, &tokens);
     }
 
     fn tokens_v4() -> (Vec<Token>, Option<&'static str>) {
