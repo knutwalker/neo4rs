@@ -1,6 +1,6 @@
 use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 
-use crate::bolt::{de, from_bytes, from_bytes_ref, from_bytes_seed, Data};
+use crate::bolt::{de, from_bytes, from_bytes_ref, from_bytes_seed, Data, Node, NodeRef};
 
 use super::de::{impl_visitor_ref, Keys, Single};
 
@@ -92,30 +92,47 @@ impl<'de> RelationshipRef<'de> {
     pub fn into<T: DeserializeOwned>(self) -> Result<T, de::Error> {
         from_bytes(self.properties.into_inner())
     }
+
+    pub fn to_owned(&self) -> Relationship {
+        Relationship {
+            id: self.id,
+            start_node_id: self.start_node_id,
+            end_node_id: self.end_node_id,
+            r#type: self.r#type.to_owned(),
+            properties: self.properties.clone(),
+            element_id: self.element_id.map(ToOwned::to_owned),
+            start_node_element_id: self.start_node_element_id.map(ToOwned::to_owned),
+            end_node_element_id: self.end_node_element_id.map(ToOwned::to_owned),
+        }
+    }
+
+    pub fn into_owned(self) -> Relationship {
+        Relationship {
+            id: self.id,
+            start_node_id: self.start_node_id,
+            end_node_id: self.end_node_id,
+            r#type: self.r#type.to_owned(),
+            properties: self.properties,
+            element_id: self.element_id.map(ToOwned::to_owned),
+            start_node_element_id: self.start_node_element_id.map(ToOwned::to_owned),
+            end_node_element_id: self.end_node_element_id.map(ToOwned::to_owned),
+        }
+    }
 }
 
-impl<'de> RelationshipRef<'de> {
-    pub(crate) fn from_other_rel(
-        id: u64,
-        start_node_id: u64,
-        end_node_id: u64,
-        r#type: &'de str,
-        properties: Data,
-        (element_id, start_node_element_id, end_node_element_id): (
-            Option<&'de str>,
-            Option<&'de str>,
-            Option<&'de str>,
-        ),
-    ) -> Self {
+impl<'de> super::path::FromUndirected<NodeRef<'de>> for RelationshipRef<'de> {
+    type Undirected = super::urel::UnboundRelationshipRef<'de>;
+
+    fn from_undirected(start: &NodeRef<'de>, end: &NodeRef<'de>, rel: &Self::Undirected) -> Self {
         Self {
-            id,
-            start_node_id,
-            end_node_id,
-            r#type,
-            properties,
-            element_id,
-            start_node_element_id,
-            end_node_element_id,
+            id: rel.id(),
+            start_node_id: start.id(),
+            end_node_id: end.id(),
+            r#type: rel.typ(),
+            properties: rel.properties.clone(),
+            element_id: rel.element_id(),
+            start_node_element_id: start.element_id(),
+            end_node_element_id: end.element_id(),
         }
     }
 }
@@ -128,6 +145,110 @@ impl<'de> Deserialize<'de> for RelationshipRef<'de> {
         D: Deserializer<'de>,
     {
         deserializer.deserialize_struct("Relationship", &[], Self::visitor())
+    }
+}
+
+/// A relationship within the graph.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Relationship {
+    id: u64,
+    start_node_id: u64,
+    end_node_id: u64,
+    r#type: String,
+    properties: Data,
+    element_id: Option<String>,
+    start_node_element_id: Option<String>,
+    end_node_element_id: Option<String>,
+}
+
+impl Relationship {
+    /// An id for this relationship.
+    ///
+    /// Ids are guaranteed to remain stable for the duration of the session
+    /// they were found in, but may be re-used for other entities after that.
+    /// As such, if you want a public identity to use for your entities,
+    /// attaching an explicit 'id' property or similar persistent
+    /// and unique identifier is a better choice.
+    pub fn id(&self) -> u64 {
+        self.id
+    }
+
+    /// A unique id for this relationship.
+    ///
+    /// It is recommended to attach an explicit 'id' property or similar
+    /// persistent and unique identifier if you want a public identity
+    /// to use for your entities.
+    pub fn element_id(&self) -> Option<&str> {
+        self.element_id.as_deref()
+    }
+
+    /// The id of the node where this relationship starts.
+    pub fn start_node_id(&self) -> u64 {
+        self.start_node_id
+    }
+
+    /// A unique id for the node where this relationship starts.
+    pub fn start_node_element_id(&self) -> Option<&str> {
+        self.start_node_element_id.as_deref()
+    }
+
+    /// The id of the node where this relationship ends.
+    pub fn end_node_id(&self) -> u64 {
+        self.end_node_id
+    }
+
+    /// A unique id for the node where this relationship ends.
+    pub fn end_node_element_id(&self) -> Option<&str> {
+        self.end_node_element_id.as_deref()
+    }
+
+    /// The type of this relationship.
+    pub fn typ(&self) -> &str {
+        &self.r#type
+    }
+
+    /// Get the names of the properties of this node
+    pub fn keys(&mut self) -> Vec<&str> {
+        self.to::<Keys>().expect("properties should be a map").0
+    }
+
+    /// Get an attribute of this node and deserialize it into custom type that implements [`serde::Deserialize`]
+    pub fn get<'this, T: Deserialize<'this> + 'this>(
+        &'this mut self,
+        key: &str,
+    ) -> Result<Option<T>, de::Error> {
+        self.properties.reset();
+        from_bytes_seed(&mut self.properties, Single::new(key))
+    }
+
+    /// Deserialize the node to a type that implements [`serde::Deserialize`].
+    /// The target type may borrow data from the node's properties.
+    pub fn to<'this, T: Deserialize<'this> + 'this>(&'this mut self) -> Result<T, de::Error> {
+        self.properties.reset();
+        from_bytes_ref(&mut self.properties)
+    }
+
+    /// Convert the node into a type that implements [`serde::Deserialize`].
+    /// The target type must not borrow data from the node's properties.
+    pub fn into<T: DeserializeOwned>(self) -> Result<T, de::Error> {
+        from_bytes(self.properties.into_inner())
+    }
+}
+
+impl super::path::FromUndirected<Node> for Relationship {
+    type Undirected = super::urel::UnboundRelationship;
+
+    fn from_undirected(start: &Node, end: &Node, rel: &Self::Undirected) -> Self {
+        Self {
+            id: rel.id(),
+            start_node_id: start.id(),
+            end_node_id: end.id(),
+            r#type: rel.typ().to_owned(),
+            properties: rel.properties.clone(),
+            element_id: rel.element_id().map(ToOwned::to_owned),
+            start_node_element_id: start.element_id().map(ToOwned::to_owned),
+            end_node_element_id: end.element_id().map(ToOwned::to_owned),
+        }
     }
 }
 

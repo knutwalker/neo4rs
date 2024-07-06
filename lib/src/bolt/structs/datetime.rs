@@ -87,6 +87,14 @@ impl<'de> DateTimeZoneIdRef<'de> {
         let datetime = chrono::DateTime::from_timestamp(self.seconds, self.nanoseconds)?;
         Some(datetime.with_timezone(&tz))
     }
+
+    pub fn to_owned(&self) -> DateTimeZoneId {
+        DateTimeZoneId {
+            seconds: self.seconds,
+            nanoseconds: self.nanoseconds,
+            tz_id: self.tz_id.to_owned(),
+        }
+    }
 }
 
 /// An instant capturing the date, the time, and the time zone.
@@ -199,6 +207,14 @@ impl<'de> LegacyDateTimeZoneIdRef<'de> {
         let tz = chrono_tz::Tz::from_str(self.tz_id).ok()?;
         let dt = chrono::DateTime::from_timestamp(self.seconds, self.nanoseconds)?;
         chrono::TimeZone::from_local_datetime(&tz, &dt.naive_utc()).single()
+    }
+
+    pub fn to_owned(&self) -> LegacyDateTimeZoneId {
+        LegacyDateTimeZoneId {
+            seconds: self.seconds,
+            nanoseconds: self.nanoseconds,
+            tz_id: self.tz_id.to_owned(),
+        }
     }
 }
 

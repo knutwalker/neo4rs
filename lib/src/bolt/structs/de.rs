@@ -9,8 +9,9 @@ use serde::{
 };
 
 use super::{
-    BoltRef, Date, DateTime, DateTimeZoneIdRef, Duration, LegacyDateTime, LegacyDateTimeZoneIdRef,
-    LocalDateTime, LocalTime, NodeRef, PathRef, Point2D, Point3D, RelationshipRef, Time,
+    Bolt, BoltRef, Date, DateTime, DateTimeZoneIdRef, Duration, LegacyDateTime,
+    LegacyDateTimeZoneIdRef, LocalDateTime, LocalTime, NodeRef, PathRef, Point2D, Point3D,
+    RelationshipRef, Time,
 };
 
 impl<'de> Deserialize<'de> for BoltRef<'de> {
@@ -159,6 +160,15 @@ impl<'de> Deserialize<'de> for BoltRef<'de> {
         }
 
         deserializer.deserialize_bytes(Vis(PhantomData))
+    }
+}
+
+impl<'de> Deserialize<'de> for Bolt {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        BoltRef::<'de>::deserialize(deserializer).map(Bolt::from)
     }
 }
 

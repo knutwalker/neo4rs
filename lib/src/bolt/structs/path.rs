@@ -2,7 +2,10 @@ use serde::de::{Deserialize, Deserializer, Error};
 
 use super::de::impl_visitor_ref;
 
-use super::{urel::UnboundRelationshipRef, NodeRef, RelationshipRef};
+use super::{
+    urel::UnboundRelationship, urel::UnboundRelationshipRef, Node, NodeRef, Relationship,
+    RelationshipRef,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PathRef<'de> {
@@ -65,8 +68,34 @@ impl<'de> PathRef<'de> {
         SegmentsIter::new(&self.nodes, &self.rels, &self.indices).map(|o| o.relationship)
     }
 
-    pub fn segments<'a>(&'a self) -> impl ExactSizeIterator<Item = Segment<'a, 'de>> + 'a {
-        self.into_iter()
+    pub fn segments<'a>(
+        &'a self,
+    ) -> impl ExactSizeIterator<Item = Segment<'a, NodeRef<'de>, RelationshipRef<'de>>> + 'a {
+        SegmentsIter::new(&self.nodes, &self.rels, &self.indices)
+    }
+
+    pub fn to_owned(&self) -> Path {
+        Path {
+            nodes: self.nodes.iter().map(NodeRef::to_owned).collect(),
+            rels: self
+                .rels
+                .iter()
+                .map(UnboundRelationshipRef::to_owned)
+                .collect(),
+            indices: self.indices.clone(),
+        }
+    }
+
+    pub fn into_owned(self) -> Path {
+        Path {
+            nodes: self.nodes.into_iter().map(NodeRef::into_owned).collect(),
+            rels: self
+                .rels
+                .into_iter()
+                .map(UnboundRelationshipRef::into_owned)
+                .collect(),
+            indices: self.indices,
+        }
     }
 }
 
@@ -74,41 +103,32 @@ impl<'de> PathRef<'de> {
 /// For example, the path `(n1)-[r1]->(n2)<-[r2]-(n3)` contains two segments:
 /// Segment 1: `(n1)-[r1]->(n2)`, Segment 2: `(n2)<-[r2]-(n3)`
 #[derive(Clone, Debug, PartialEq)]
-pub struct Segment<'path, 'de: 'path> {
+pub struct Segment<'path, N: 'path, R: 'path> {
     /// The [`Node`] at the start of the segment.
-    pub start: &'path NodeRef<'de>,
-    /// The [`UnboundRelationship`] connecting the two nodes.
+    pub start: &'path N,
+    /// The [`Relationship`] connecting the two nodes.
     /// The [`Relationship::start_node_id()`] might be different from the [`Segment::start`] field
     /// of this segment if the relationship was traversed in inverse order.
-    pub relationship: RelationshipRef<'de>,
+    pub relationship: R,
     /// The [`Node`] at the end of the segment.
-    pub end: &'path NodeRef<'de>,
+    pub end: &'path N,
 }
 
-impl<'a, 'de: 'a> IntoIterator for &'a PathRef<'de> {
-    type Item = Segment<'a, 'de>;
+pub(super) trait FromUndirected<N> {
+    type Undirected;
 
-    type IntoIter = SegmentsIter<'a, 'de>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        SegmentsIter::new(&self.nodes, &self.rels, &self.indices)
-    }
+    fn from_undirected(start: &N, end: &N, rel: &Self::Undirected) -> Self;
 }
 
-#[doc(hidden)]
-pub struct SegmentsIter<'a, 'de: 'a> {
-    nodes: &'a [NodeRef<'de>],
-    rels: &'a [UnboundRelationshipRef<'de>],
+pub(super) struct SegmentsIter<'a, N: 'a, R: FromUndirected<N> + 'a> {
+    nodes: &'a [N],
+    rels: &'a [R::Undirected],
     indices: std::slice::ChunksExact<'a, isize>,
     last_node: usize,
 }
 
-impl<'a, 'de: 'a> SegmentsIter<'a, 'de> {
-    fn new(
-        nodes: &'a [NodeRef<'de>],
-        rels: &'a [UnboundRelationshipRef<'de>],
-        indices: &'a [isize],
-    ) -> Self {
+impl<'a, N: 'a, R: FromUndirected<N> + 'a> SegmentsIter<'a, N, R> {
+    fn new(nodes: &'a [N], rels: &'a [R::Undirected], indices: &'a [isize]) -> Self {
         Self {
             nodes,
             rels,
@@ -117,8 +137,8 @@ impl<'a, 'de: 'a> SegmentsIter<'a, 'de> {
         }
     }
 
-    fn extract_segment(&mut self, rel_and_node: &[isize]) -> Segment<'a, 'de> {
-        let next_node_index = NodesIter::extract_node_index(rel_and_node);
+    fn extract_segment(&mut self, rel_and_node: &[isize]) -> Segment<'a, N, R> {
+        let next_node_index = NodesIter::<N>::extract_node_index(rel_and_node);
 
         let rel_index = rel_and_node[0];
         assert_ne!(rel_index, 0, "Relationship index cannot be zero");
@@ -136,12 +156,7 @@ impl<'a, 'de: 'a> SegmentsIter<'a, 'de> {
             let end_node = &self.nodes[end_node_index];
             let rel = &self.rels[rel_index];
 
-            rel.bind(
-                start_node.id(),
-                start_node.element_id(),
-                end_node.id(),
-                end_node.element_id(),
-            )
+            R::from_undirected(start_node, end_node, rel)
         };
 
         let segment = {
@@ -161,8 +176,8 @@ impl<'a, 'de: 'a> SegmentsIter<'a, 'de> {
     }
 }
 
-impl<'a, 'de: 'a> Iterator for SegmentsIter<'a, 'de> {
-    type Item = Segment<'a, 'de>;
+impl<'a, N: 'a, R: FromUndirected<N> + 'a> Iterator for SegmentsIter<'a, N, R> {
+    type Item = Segment<'a, N, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let rel_and_node = self.indices.next()?;
@@ -181,20 +196,20 @@ impl<'a, 'de: 'a> Iterator for SegmentsIter<'a, 'de> {
     }
 }
 
-impl<'a, 'de: 'a> ExactSizeIterator for SegmentsIter<'a, 'de> {
+impl<'a, N: 'a, R: FromUndirected<N> + 'a> ExactSizeIterator for SegmentsIter<'a, N, R> {
     fn len(&self) -> usize {
         self.indices.len()
     }
 }
 
-struct NodesIter<'a, 'de: 'a> {
-    nodes: &'a [NodeRef<'de>],
+struct NodesIter<'a, T: 'a> {
+    nodes: &'a [T],
     indices: std::slice::ChunksExact<'a, isize>,
     emit_start: bool,
 }
 
-impl<'a, 'de: 'a> NodesIter<'a, 'de> {
-    fn new(nodes: &'a [NodeRef<'de>], indices: &'a [isize]) -> Self {
+impl<'a, T: 'a> NodesIter<'a, T> {
+    fn new(nodes: &'a [T], indices: &'a [isize]) -> Self {
         Self {
             nodes,
             indices: indices.chunks_exact(2),
@@ -207,14 +222,14 @@ impl<'a, 'de: 'a> NodesIter<'a, 'de> {
         usize::try_from(node_index).expect("Node index values must be >= 0")
     }
 
-    fn extract_node(&self, rel_and_node: &[isize]) -> &'a NodeRef<'de> {
+    fn extract_node(&self, rel_and_node: &[isize]) -> &'a T {
         let index = Self::extract_node_index(rel_and_node);
         &self.nodes[index]
     }
 }
 
-impl<'a, 'de: 'a> Iterator for NodesIter<'a, 'de> {
-    type Item = &'a NodeRef<'de>;
+impl<'a, T: 'a> Iterator for NodesIter<'a, T> {
+    type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
         let node_index = if self.emit_start {
@@ -269,13 +284,13 @@ impl<'a, 'de: 'a> Iterator for NodesIter<'a, 'de> {
     }
 }
 
-impl<'a, 'de: 'a> ExactSizeIterator for NodesIter<'a, 'de> {
+impl<'a, T: 'a> ExactSizeIterator for NodesIter<'a, T> {
     fn len(&self) -> usize {
         self.indices.len() + usize::from(self.emit_start)
     }
 }
 
-impl<'a, 'de: 'a> DoubleEndedIterator for NodesIter<'a, 'de> {
+impl<'a, T: 'a> DoubleEndedIterator for NodesIter<'a, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
         let index = match self.indices.next_back() {
             Some(rel_and_node) => Self::extract_node_index(rel_and_node),
@@ -310,6 +325,65 @@ impl<'de> Deserialize<'de> for PathRef<'de> {
                 }
                 Ok(p)
             })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Path {
+    pub(crate) nodes: Vec<Node>,
+    pub(super) rels: Vec<UnboundRelationship>,
+    pub(crate) indices: Vec<isize>,
+}
+
+/// A node within the graph.
+impl Path {
+    /// Returns the start [`Node`] of this path.
+    pub fn start(&self) -> &Node {
+        &self.nodes[0]
+    }
+
+    /// Returns the end [`Node`] of this path.
+    pub fn end(&self) -> &Node {
+        self.nodes().last().unwrap()
+    }
+
+    /// Returns the number of segments in this path, which will be the same as the number of relationships.
+    pub fn len(&self) -> usize {
+        self.indices.len() / 2
+    }
+
+    /// Returns true if this path has no segments.
+    pub fn is_empty(&self) -> bool {
+        self.indices.is_empty()
+    }
+
+    /// Returns a reference to the [`Node`] with the given id if it is contained in this path.
+    pub fn get_node_by_id(&self, id: u64) -> Option<&Node> {
+        self.nodes.iter().find(|o| o.id() == id)
+    }
+
+    /// Returns a [`Relationship`] with the given id if it is contained in this path.
+    pub fn get_relationship_by_id(&self, id: u64) -> Option<Relationship> {
+        self.relationships().find(|o| o.id() == id)
+    }
+
+    /// Returns an [`Iterator`] over the nodes in this path.
+    /// The nodes will appear in the same order as they appear in the path
+    pub fn nodes(&self) -> impl ExactSizeIterator<Item = &'_ Node> + DoubleEndedIterator + '_ {
+        NodesIter::new(&self.nodes, &self.indices)
+    }
+
+    /// Returns an [`Iterator`] over the relationships in this path.
+    /// The relationships will appear in the same order as they appear in the path.
+    /// Note that this iterator does not return references but owned types.
+    /// To iterate over the individual segments of this path and delay creating new relationships,
+    /// use [`Path::segments`].
+    pub fn relationships(&self) -> impl ExactSizeIterator<Item = Relationship> + '_ {
+        SegmentsIter::new(&self.nodes, &self.rels, &self.indices).map(|o| o.relationship)
+    }
+
+    pub fn segments(&self) -> impl ExactSizeIterator<Item = Segment<'_, Node, Relationship>> + '_ {
+        SegmentsIter::new(&self.nodes, &self.rels, &self.indices)
     }
 }
 
@@ -348,26 +422,29 @@ mod tests {
             vec![
                 Segment {
                     start: path.get_node_by_id(42).unwrap(),
-                    relationship: path
-                        .get_unbounded_relationship_by_id(1000)
-                        .unwrap()
-                        .bind(42, None, 69, None),
+                    relationship: RelationshipRef::from_undirected(
+                        path.get_node_by_id(42).unwrap(),
+                        path.get_node_by_id(69).unwrap(),
+                        path.get_unbounded_relationship_by_id(1000).unwrap()
+                    ),
                     end: path.get_node_by_id(69).unwrap(),
                 },
                 Segment {
                     start: path.get_node_by_id(69).unwrap(),
-                    relationship: path
-                        .get_unbounded_relationship_by_id(1000)
-                        .unwrap()
-                        .bind(42, None, 69, None),
+                    relationship: RelationshipRef::from_undirected(
+                        path.get_node_by_id(42).unwrap(),
+                        path.get_node_by_id(69).unwrap(),
+                        path.get_unbounded_relationship_by_id(1000).unwrap()
+                    ),
                     end: path.get_node_by_id(42).unwrap(),
                 },
                 Segment {
                     start: path.get_node_by_id(42).unwrap(),
-                    relationship: path
-                        .get_unbounded_relationship_by_id(1001)
-                        .unwrap()
-                        .bind(42, None, 1, None),
+                    relationship: RelationshipRef::from_undirected(
+                        path.get_node_by_id(42).unwrap(),
+                        path.get_node_by_id(1).unwrap(),
+                        path.get_unbounded_relationship_by_id(1001).unwrap()
+                    ),
                     end: path.get_node_by_id(1).unwrap(),
                 },
             ]
