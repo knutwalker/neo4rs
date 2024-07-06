@@ -1,6 +1,6 @@
 use serde::de::{Deserialize, Deserializer, Error};
 
-use super::de::impl_visitor_ref;
+use super::de::{impl_visitor, impl_visitor_ref};
 
 use super::{
     urel::UnboundRelationship, urel::UnboundRelationshipRef, Node, NodeRef, Relationship,
@@ -384,6 +384,27 @@ impl Path {
 
     pub fn segments(&self) -> impl ExactSizeIterator<Item = Segment<'_, Node, Relationship>> + '_ {
         SegmentsIter::new(&self.nodes, &self.rels, &self.indices)
+    }
+}
+
+impl_visitor!(Path(nodes, rels, indices) == 0x50);
+
+impl<'de> Deserialize<'de> for Path {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer
+            .deserialize_struct("Path", &[], Self::visitor())
+            .and_then(|p| {
+                if p.nodes.is_empty() {
+                    return Err(Error::custom("must have at least one node"));
+                }
+                if p.indices.len() % 2 != 0 {
+                    return Err(Error::custom("indices must be even"));
+                }
+                Ok(p)
+            })
     }
 }
 

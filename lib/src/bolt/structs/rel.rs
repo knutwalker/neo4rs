@@ -2,7 +2,7 @@ use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 
 use crate::bolt::{de, from_bytes, from_bytes_ref, from_bytes_seed, Data, Node, NodeRef};
 
-use super::de::{impl_visitor_ref, Keys, Single};
+use super::de::{impl_visitor, impl_visitor_ref, Keys, Single};
 
 /// A relationship within the graph.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -249,6 +249,26 @@ impl super::path::FromUndirected<Node> for Relationship {
             start_node_element_id: start.element_id().map(ToOwned::to_owned),
             end_node_element_id: end.element_id().map(ToOwned::to_owned),
         }
+    }
+}
+
+impl_visitor!(
+    Relationship(
+        id,
+        start_node_id,
+        end_node_id,
+        r#type,
+        properties,
+        [element_id, start_node_element_id, end_node_element_id]
+    ) == 0x52
+);
+
+impl<'de> Deserialize<'de> for Relationship {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_struct("Relationship", &[], Self::visitor())
     }
 }
 

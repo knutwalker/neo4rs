@@ -2,7 +2,7 @@ use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 
 use crate::bolt::{de, from_bytes, from_bytes_ref, from_bytes_seed, Data};
 
-use super::de::{impl_visitor_ref, Keys, Single};
+use super::de::{impl_visitor, impl_visitor_ref, Keys, Single};
 
 /// An unbounded relationship within the graph.
 /// The difference to [`super::Relationship`] is that an unbounded relationship
@@ -161,6 +161,17 @@ impl UnboundRelationship {
     /// The target type must not borrow data from the node's properties.
     pub fn into<T: DeserializeOwned>(self) -> Result<T, de::Error> {
         from_bytes(self.properties.into_inner())
+    }
+}
+
+impl_visitor!(UnboundRelationship(id, r#type, properties, [element_id]) == 0x72);
+
+impl<'de> Deserialize<'de> for UnboundRelationship {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_struct("UnboundRelationship", &[], Self::visitor())
     }
 }
 

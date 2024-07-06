@@ -44,9 +44,20 @@ pub(crate) trait MessageResponse: Sized {
     fn parse(bytes: Bytes) -> Result<Self, de::Error>;
 }
 
-impl<T: DeserializeOwned> MessageResponse for T {
+pub(crate) trait MessageResponseRef<'de>: Sized {
+    /// Deserialize this type from a packstream encoded byte slice.
+    fn parse_ref(bytes: &'de mut Data) -> Result<Self, de::Error>;
+}
+
+impl<T: DeserializeOwned + std::fmt::Debug> MessageResponse for T {
     fn parse(bytes: Bytes) -> Result<Self, de::Error> {
         from_bytes(bytes)
+    }
+}
+
+impl<'de, T: Deserialize<'de> + std::fmt::Debug + 'de> MessageResponseRef<'de> for T {
+    fn parse_ref(bytes: &'de mut Data) -> Result<Self, de::Error> {
+        from_bytes_ref(bytes)
     }
 }
 

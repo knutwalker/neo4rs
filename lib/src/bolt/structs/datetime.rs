@@ -287,11 +287,7 @@ impl<'de> Deserialize<'de> for LegacyDateTimeZoneIdRef<'de> {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_struct(
-            "LegacyDateTimeZoneId",
-            &[],
-            LegacyDateTimeZoneIdRef::visitor(),
-        )
+        deserializer.deserialize_struct("LegacyDateTimeZoneId", &[], Self::visitor())
     }
 }
 
@@ -388,6 +384,27 @@ impl LegacyDateTimeZoneId {
         let tz = chrono_tz::Tz::from_str(&self.tz_id).ok()?;
         let dt = chrono::DateTime::from_timestamp(self.seconds, self.nanoseconds)?;
         chrono::TimeZone::from_local_datetime(&tz, &dt.naive_utc()).single()
+    }
+}
+
+impl_visitor!(DateTimeZoneId(seconds, nanoseconds, tz_id) == 0x69);
+impl_visitor!(LegacyDateTimeZoneId(seconds, nanoseconds, tz_id) == 0x66);
+
+impl<'de> Deserialize<'de> for DateTimeZoneId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_struct("DateTimeZoneId", &[], Self::visitor())
+    }
+}
+
+impl<'de> Deserialize<'de> for LegacyDateTimeZoneId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_struct("LegacyDateTimeZoneId", &[], Self::visitor())
     }
 }
 

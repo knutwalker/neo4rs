@@ -1,5 +1,5 @@
 use crate::{
-    bolt::{ExpectedResponse, Hello, Message, MessageResponse, Reset, Summary},
+    bolt::{ExpectedResponse, Hello, Message, MessageResponse, MessageResponseRef, Reset, Summary},
     errors::{Error, Result},
     messages::{BoltRequest, BoltResponse},
     version::Version,
@@ -23,6 +23,7 @@ const MAX_CHUNK_SIZE: usize = 65_535 - mem::size_of::<u16>();
 pub struct Connection {
     version: Version,
     stream: BufStream<ConnectionStream>,
+    last_result: crate::bolt::Data,
 }
 
 impl Connection {
@@ -93,7 +94,11 @@ impl Connection {
         let mut response = [0, 0, 0, 0];
         stream.read_exact(&mut response).await?;
         let version = Version::parse(response)?;
-        let mut connection = Connection { version, stream };
+        let mut connection = Connection {
+            version,
+            stream,
+            last_result: crate::bolt::Data::new(Bytes::new()),
+        };
 
         let hello = Hello::new("neo4rs", user, password);
         let hello = connection.send_recv_as(hello).await?;
@@ -147,6 +152,17 @@ impl Connection {
     pub(crate) async fn recv_as<T: MessageResponse>(&mut self) -> Result<T> {
         let bytes = self.recv_bytes().await?;
         Ok(T::parse(bytes)?)
+    }
+
+    pub(crate) async fn recv_as_ref<'de, T: MessageResponseRef<'de> + 'de>(
+        &'de mut self,
+    ) -> Result<T> {
+        let bytes = self.recv_bytes().await?;
+        let _previous_bytes = self.last_result.reset_to(bytes);
+        #[cfg(debug_assertions)]
+        Self::dbg("drop", &_previous_bytes);
+
+        Ok(T::parse_ref(&mut self.last_result)?)
     }
 
     async fn send_bytes(&mut self, bytes: Bytes) -> Result<()> {

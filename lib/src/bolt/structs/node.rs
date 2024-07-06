@@ -2,7 +2,7 @@ use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 
 use crate::bolt::{de, from_bytes, from_bytes_ref, from_bytes_seed, Data};
 
-use super::de::{impl_visitor_ref, Keys, Single};
+use super::de::{impl_visitor, impl_visitor_ref, Keys, Single};
 
 /// A node within the graph.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -165,6 +165,17 @@ impl Node {
 impl From<NodeRef<'_>> for Node {
     fn from(node: NodeRef<'_>) -> Self {
         node.into_owned()
+    }
+}
+
+impl_visitor!(Node(id, labels, properties, [element_id]) == 0x4E);
+
+impl<'de> Deserialize<'de> for Node {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_struct("Node", &[], Self::visitor())
     }
 }
 

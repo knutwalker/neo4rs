@@ -123,7 +123,7 @@ impl RowStream {
                             let record = BoltList::from(
                                 record
                                     .into_iter()
-                                    .map(|b| b.into())
+                                    .map(BoltType::from)
                                     .collect::<Vec<BoltType>>(),
                             );
                             let row = Row::new(self.fields.clone(), record);

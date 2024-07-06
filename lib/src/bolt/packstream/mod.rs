@@ -19,6 +19,7 @@ impl Data {
         Self { bytes, keep_alive }
     }
 
+    #[cfg(test)]
     pub fn bytes(&self) -> &Bytes {
         &self.bytes
     }
@@ -33,6 +34,12 @@ impl Data {
 
     pub fn into_inner(self) -> Bytes {
         self.keep_alive
+    }
+
+    pub(crate) fn reset_to(&mut self, bytes: Bytes) -> Bytes {
+        let old = std::mem::replace(&mut self.keep_alive, bytes.clone());
+        self.bytes = bytes;
+        old
     }
 }
 
