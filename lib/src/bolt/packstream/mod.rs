@@ -333,6 +333,18 @@ pub mod debug {
 
     pub struct Dbg<'a>(pub &'a Bytes);
 
+    struct Tag(u8);
+
+    impl std::fmt::Display for Tag {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            if self.0.is_ascii_alphanumeric() {
+                write!(f, "'{}' (0x{:02X})", self.0 as char, self.0)
+            } else {
+                write!(f, "0x{:02X}", self.0)
+            }
+        }
+    }
+
     impl std::fmt::Debug for Dbg<'_> {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             let mut bytes = self.0.clone();
@@ -340,8 +352,8 @@ pub mod debug {
             macro_rules! string {
                 ($bytes:expr) => {
                     match ::std::str::from_utf8(&$bytes) {
-                        Ok(str) => f.write_str(str),
-                        Err(e) => write!(f, "{:?} (invalid utf8: {:?})", bytes, e),
+                        Ok(s) => write!(f, "\"{}\"", s),
+                        Err(e) => write!(f, "[{:?}] (invalid utf8: {:?})", bytes, e),
                     }
                 };
             }
@@ -361,38 +373,38 @@ pub mod debug {
 
                 match hi {
                     0x8 => string!(bytes.split_to(lo as _)),
-                    0x9 => write!(f, "List<{}>", lo),
-                    0xA => write!(f, "Map<{}>", lo),
-                    0xB => write!(f, "Struct<tag={:02X} len={}>", bytes.get_u8(), lo),
+                    0x9 => write!(f, "(List[{}])", lo),
+                    0xA => write!(f, "(Map[{}])", lo),
+                    0xB => write!(f, "(Struct<tag={} len={1}>)", Tag(bytes.get_u8()), lo),
                     0xC => match lo {
                         0x0 => write!(f, "NULL"),
-                        0x1 => write!(f, "Float<{}>", bytes.get_f64()),
+                        0x1 => write!(f, "Float({})", bytes.get_f64()),
                         0x2 => write!(f, "FALSE"),
                         0x3 => write!(f, "TRUE"),
-                        0x8 => write!(f, "Int<{}>", bytes.get_i8()),
-                        0x9 => write!(f, "Int<{}>", bytes.get_i16()),
-                        0xA => write!(f, "Int<{}>", bytes.get_i32()),
-                        0xB => write!(f, "Int<{}>", bytes.get_i64()),
-                        0xC => write!(f, "{:0X}", split!(bytes.split_to(bytes.get_u8() as _))),
-                        0xD => write!(f, "{:0X}", split!(bytes.split_to(bytes.get_u16() as _))),
-                        0xE => write!(f, "{:0X}", split!(bytes.split_to(bytes.get_u32() as _))),
+                        0x8 => write!(f, "Int({})", bytes.get_i8()),
+                        0x9 => write!(f, "Int({})", bytes.get_i16()),
+                        0xA => write!(f, "Int({})", bytes.get_i32()),
+                        0xB => write!(f, "Int({})", bytes.get_i64()),
+                        0xC => write!(f, "[{:0X}]", split!(bytes.split_to(bytes.get_u8() as _))),
+                        0xD => write!(f, "[{:0X}]", split!(bytes.split_to(bytes.get_u16() as _))),
+                        0xE => write!(f, "[{:0X}]", split!(bytes.split_to(bytes.get_u32() as _))),
                         _ => write!(f, "Unknown marker"),
                     },
                     0xD => match lo {
                         0x0 => string!(split!(bytes.split_to(bytes.get_u8() as _))),
                         0x1 => string!(split!(bytes.split_to(bytes.get_u16() as _))),
                         0x2 => string!(split!(bytes.split_to(bytes.get_u32() as _))),
-                        0x4 => write!(f, "List<{}>", bytes.get_u8()),
-                        0x5 => write!(f, "List<{}>", bytes.get_u16()),
-                        0x6 => write!(f, "List<{}>", bytes.get_u32()),
-                        0x8 => write!(f, "Map<{}>", bytes.get_u8()),
-                        0x9 => write!(f, "Map<{}>", bytes.get_u16()),
-                        0xA => write!(f, "Map<{}>", bytes.get_u32()),
+                        0x4 => write!(f, "(List[{}])", bytes.get_u8()),
+                        0x5 => write!(f, "(List[{}])", bytes.get_u16()),
+                        0x6 => write!(f, "(List[{}])", bytes.get_u32()),
+                        0x8 => write!(f, "(Map[{}])", bytes.get_u8()),
+                        0x9 => write!(f, "(Map[{}])", bytes.get_u16()),
+                        0xA => write!(f, "(Map[{}])", bytes.get_u32()),
                         // C, D => struct 8/16
                         _ => write!(f, "Unknown marker"),
                     },
                     0xE => write!(f, "Unknown marker"),
-                    _ => write!(f, "Int<{}>", marker as i8),
+                    _ => write!(f, "Int({})", marker as i8),
                 }?
             }
 

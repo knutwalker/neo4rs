@@ -491,6 +491,7 @@ struct SharedBytes<'a> {
     _lifetime: PhantomData<&'a mut ()>,
 }
 
+#[cfg(debug_assertions)]
 impl<'a> fmt::Debug for SharedBytes<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         crate::bolt::Dbg(unsafe { &*self.bytes }).fmt(f)
