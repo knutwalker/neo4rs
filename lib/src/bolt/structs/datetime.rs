@@ -18,8 +18,8 @@ impl DateTime {
         self.seconds
     }
 
-    /// Nanoseconds since midnight in the timezone of this time, not in UTC.
-    pub fn nanoseconds_since_midnight(&self) -> u32 {
+    /// Nanoseconds since the last whole second.
+    pub fn nanoseconds(&self) -> u32 {
         self.nanoseconds
     }
 
@@ -56,8 +56,8 @@ impl<'de> DateTimeZoneIdRef<'de> {
         self.seconds
     }
 
-    /// Nanoseconds since midnight in the timezone of this time, not in UTC.
-    pub fn nanoseconds_since_midnight(&self) -> u32 {
+    /// Nanoseconds since the last whole second.
+    pub fn nanoseconds(&self) -> u32 {
         self.nanoseconds
     }
 
@@ -102,8 +102,8 @@ impl LocalDateTime {
         self.seconds
     }
 
-    /// Nanoseconds since midnight in the timezone of this time, not in UTC.
-    pub fn nanoseconds_since_midnight(&self) -> u32 {
+    /// Nanoseconds since the last whole second.
+    pub fn nanoseconds(&self) -> u32 {
         self.nanoseconds
     }
 
@@ -131,8 +131,8 @@ impl LegacyDateTime {
         self.seconds
     }
 
-    /// Nanoseconds since midnight in the timezone of this time, not in UTC.
-    pub fn nanoseconds_since_midnight(&self) -> u32 {
+    /// Nanoseconds since the last whole second.
+    pub fn nanoseconds(&self) -> u32 {
         self.nanoseconds
     }
 
@@ -169,8 +169,8 @@ impl<'de> LegacyDateTimeZoneIdRef<'de> {
         self.seconds
     }
 
-    /// Nanoseconds since midnight in the timezone of this time, not in UTC.
-    pub fn nanoseconds_since_midnight(&self) -> u32 {
+    /// Nanoseconds since the last whole second.
+    pub fn nanoseconds(&self) -> u32 {
         self.nanoseconds
     }
 
@@ -294,8 +294,8 @@ impl DateTimeZoneId {
         self.seconds
     }
 
-    /// Nanoseconds since midnight in the timezone of this time, not in UTC.
-    pub fn nanoseconds_since_midnight(&self) -> u32 {
+    /// Nanoseconds since the last whole second.
+    pub fn nanoseconds(&self) -> u32 {
         self.nanoseconds
     }
 
@@ -342,8 +342,8 @@ impl LegacyDateTimeZoneId {
         self.seconds
     }
 
-    /// Nanoseconds since midnight in the timezone of this time, not in UTC.
-    pub fn nanoseconds_since_midnight(&self) -> u32 {
+    /// Nanoseconds since the last whole second.
+    pub fn nanoseconds(&self) -> u32 {
         self.nanoseconds
     }
 
