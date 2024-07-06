@@ -421,7 +421,7 @@
 //! ```
 //!
 //!
-mod bolt;
+pub mod bolt;
 mod config;
 mod connection;
 mod convert;

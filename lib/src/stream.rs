@@ -1,11 +1,11 @@
 use crate::{
-    bolt::{Discard, Pull, Response, Streaming, StreamingSummary, Summary, WrapExtra as _},
+    bolt::{Bolt, Discard, Pull, Response, Streaming, StreamingSummary, Summary, WrapExtra as _},
     errors::{Error, Result},
     pool::ManagedConnection,
     row::Row,
     txn::TransactionHandle,
     types::BoltList,
-    DeError,
+    BoltType, DeError,
 };
 use futures::{stream::try_unfold, FutureExt as _, TryStream, TryStreamExt as _};
 use serde::de::DeserializeOwned;
@@ -116,10 +116,16 @@ impl RowStream {
                 State::Pulling => {
                     let connection = handle.connection();
                     let response = connection
-                        .recv_as::<Response<BoltList, Streaming>>()
+                        .recv_as::<Response<Vec<Bolt>, Streaming>>()
                         .await?;
                     match response {
                         Response::Detail(record) => {
+                            let record = BoltList::from(
+                                record
+                                    .into_iter()
+                                    .map(|b| b.into())
+                                    .collect::<Vec<BoltType>>(),
+                            );
                             let row = Row::new(self.fields.clone(), record);
                             self.buffer.push_back(row);
                         }

@@ -13,7 +13,6 @@ use crate::{
 use begin::Begin;
 use bytes::Bytes;
 use failure::Failure;
-use pull::Pull;
 use record::Record;
 use run::Run;
 use success::Success;
@@ -28,17 +27,12 @@ pub enum BoltResponse {
 #[derive(Debug, PartialEq, Clone)]
 pub enum BoltRequest {
     Run(Run),
-    Pull(Pull),
     Begin(Begin),
 }
 
 impl BoltRequest {
     pub fn run(db: &str, query: &str, params: BoltMap) -> BoltRequest {
         BoltRequest::Run(Run::new(db.into(), query.into(), params))
-    }
-
-    pub fn pull(n: usize, qid: i64) -> BoltRequest {
-        BoltRequest::Pull(Pull::new(n as i64, qid))
     }
 
     pub fn begin(db: &str) -> BoltRequest {
@@ -51,7 +45,6 @@ impl BoltRequest {
     pub fn into_bytes(self, version: Version) -> Result<Bytes> {
         let bytes: Bytes = match self {
             BoltRequest::Run(run) => run.into_bytes(version)?,
-            BoltRequest::Pull(pull) => pull.into_bytes(version)?,
             BoltRequest::Begin(begin) => begin.into_bytes(version)?,
         };
         Ok(bytes)
