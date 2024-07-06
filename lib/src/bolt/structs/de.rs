@@ -9,11 +9,11 @@ use serde::{
 };
 
 use super::{
-    Bolt, Date, DateTime, DateTimeZoneId, Duration, LegacyDateTime, LegacyDateTimeZoneId,
-    LocalDateTime, LocalTime, Node, Path, Point2D, Point3D, Relationship, Time,
+    BoltRef, Date, DateTime, DateTimeZoneIdRef, Duration, LegacyDateTime, LegacyDateTimeZoneIdRef,
+    LocalDateTime, LocalTime, NodeRef, PathRef, Point2D, Point3D, RelationshipRef, Time,
 };
 
-impl<'de> Deserialize<'de> for Bolt<'de> {
+impl<'de> Deserialize<'de> for BoltRef<'de> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -21,7 +21,7 @@ impl<'de> Deserialize<'de> for Bolt<'de> {
         struct Vis<'de>(PhantomData<&'de ()>);
 
         impl<'de> Visitor<'de> for Vis<'de> {
-            type Value = Bolt<'de>;
+            type Value = BoltRef<'de>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 formatter.write_str("A Bolt Node struct")
@@ -31,21 +31,21 @@ impl<'de> Deserialize<'de> for Bolt<'de> {
             where
                 E: Error,
             {
-                Ok(Bolt::Null)
+                Ok(BoltRef::Null)
             }
 
             fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                Ok(Bolt::Boolean(v))
+                Ok(BoltRef::Boolean(v))
             }
 
             fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                Ok(Bolt::Integer(v))
+                Ok(BoltRef::Integer(v))
             }
 
             fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
@@ -53,28 +53,28 @@ impl<'de> Deserialize<'de> for Bolt<'de> {
                 E: Error,
             {
                 // TODO
-                Ok(Bolt::Integer(v as i64))
+                Ok(BoltRef::Integer(v as i64))
             }
 
             fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                Ok(Bolt::Float(v))
+                Ok(BoltRef::Float(v))
             }
 
             fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                Ok(Bolt::String(v))
+                Ok(BoltRef::String(v))
             }
 
             fn visit_borrowed_bytes<E>(self, v: &'de [u8]) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                Ok(Bolt::Bytes(v))
+                Ok(BoltRef::Bytes(v))
             }
 
             fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
@@ -85,7 +85,7 @@ impl<'de> Deserialize<'de> for Bolt<'de> {
                 while let Some(item) = seq.next_element()? {
                     items.push(item);
                 }
-                Ok(Bolt::List(items))
+                Ok(BoltRef::List(items))
             }
 
             fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
@@ -96,10 +96,10 @@ impl<'de> Deserialize<'de> for Bolt<'de> {
                     .size_hint()
                     .map_or_else(HashMap::new, HashMap::with_capacity);
 
-                while let Some((key, value)) = map.next_entry::<&str, Bolt>()? {
+                while let Some((key, value)) = map.next_entry::<&str, BoltRef>()? {
                     items.insert(key, value);
                 }
-                Ok(Bolt::Dictionary(items))
+                Ok(BoltRef::Dictionary(items))
             }
 
             fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
@@ -108,40 +108,44 @@ impl<'de> Deserialize<'de> for Bolt<'de> {
             {
                 let (tag, data) = data.variant::<u8>()?;
                 match tag {
-                    0x4E => data.struct_variant(&[], Node::visitor()).map(Bolt::Node),
+                    0x4E => data
+                        .struct_variant(&[], NodeRef::visitor())
+                        .map(BoltRef::Node),
                     0x52 => data
-                        .struct_variant(&[], Relationship::visitor())
-                        .map(Bolt::Relationship),
-                    0x50 => data.struct_variant(&[], Path::visitor()).map(Bolt::Path),
-                    0x44 => data.struct_variant(&[], Date::visitor()).map(Bolt::Date),
-                    0x54 => data.struct_variant(&[], Time::visitor()).map(Bolt::Time),
+                        .struct_variant(&[], RelationshipRef::visitor())
+                        .map(BoltRef::Relationship),
+                    0x50 => data
+                        .struct_variant(&[], PathRef::visitor())
+                        .map(BoltRef::Path),
+                    0x44 => data.struct_variant(&[], Date::visitor()).map(BoltRef::Date),
+                    0x54 => data.struct_variant(&[], Time::visitor()).map(BoltRef::Time),
                     0x74 => data
                         .struct_variant(&[], LocalTime::visitor())
-                        .map(Bolt::LocalTime),
+                        .map(BoltRef::LocalTime),
                     0x49 => data
                         .struct_variant(&[], DateTime::visitor())
-                        .map(Bolt::DateTime),
+                        .map(BoltRef::DateTime),
                     0x69 => data
-                        .struct_variant(&[], DateTimeZoneId::visitor())
-                        .map(Bolt::DateTimeZoneId),
+                        .struct_variant(&[], DateTimeZoneIdRef::visitor())
+                        .map(BoltRef::DateTimeZoneId),
                     0x64 => data
                         .struct_variant(&[], LocalDateTime::visitor())
-                        .map(Bolt::LocalDateTime),
+                        .map(BoltRef::LocalDateTime),
                     0x45 => data
                         .struct_variant(&[], Duration::visitor())
-                        .map(Bolt::Duration),
+                        .map(BoltRef::Duration),
                     0x58 => data
                         .struct_variant(&[], Point2D::visitor())
-                        .map(Bolt::Point2D),
+                        .map(BoltRef::Point2D),
                     0x59 => data
                         .struct_variant(&[], Point3D::visitor())
-                        .map(Bolt::Point3D),
+                        .map(BoltRef::Point3D),
                     0x46 => data
                         .struct_variant(&[], LegacyDateTime::visitor())
-                        .map(Bolt::LegacyDateTime),
+                        .map(BoltRef::LegacyDateTime),
                     0x66 => data
-                        .struct_variant(&[], LegacyDateTimeZoneId::visitor())
-                        .map(Bolt::LegacyDateTimeZoneId),
+                        .struct_variant(&[], LegacyDateTimeZoneIdRef::visitor())
+                        .map(BoltRef::LegacyDateTimeZoneId),
                     0x72 => Err(Error::invalid_type(
                         serde::de::Unexpected::Other("unbounded relationship outside of a path"),
                         &"a valid Bolt struct",
@@ -320,84 +324,16 @@ macro_rules! count_tts {
     ($($a:tt $even:tt)*) => { $crate::bolt::structs::de::count_tts!($($a)*) << 1 };
 }
 
-macro_rules! impl_visitor {
-    ($typ:ident $(<$($bound:tt),+>)? ($($name:ident),+ $(,)? $([$($opt_name:ident),+ $(,)?])? $({$($def_name:ident),+ $(,)?})?) == $tag:literal) => {
-        impl$(<$($bound),+>)? $typ$(<$($bound),+>)? {
-            pub(super) fn visitor() -> impl ::serde::de::Visitor<$($($bound),+,)? Value = Self> {
+macro_rules! impl_visitor_ref {
+    ($typ:ident <'de> ($($name:ident),+ $(,)? $([$($opt_name:ident),+ $(,)?])?) == $tag:literal) => {
+        impl<'de> $typ<'de> {
+            pub(super) fn visitor() -> impl ::serde::de::Visitor<'de, Value = Self> {
                 struct Vis;
 
-                impl$(<$($bound),+>)? ::serde::de::Visitor$(<$($bound),+>)? for Vis {
-                    type Value = $typ$(<$($bound),+>)?;
+                impl<'de> ::serde::de::Visitor<'de> for Vis {
+                    type Value = $typ<'de>;
 
-                    fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-                        formatter.write_str(concat!("a valid ", stringify!($typ), " struct"))
-                    }
-
-                    fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
-                    where
-                        A: ::serde::de::EnumAccess<'de>,
-                    {
-                        let (tag, data) = ::serde::de::EnumAccess::variant::<u8>(data)?;
-                        if tag != $tag {
-                            return Err(serde::de::Error::invalid_type(
-                                serde::de::Unexpected::Other(&format!("struct with tag {:02X}", tag)),
-                                &format!(concat!("a Bolt ", stringify!($typ), " struct (tag {:02X})"), $tag).as_str(),
-                            ));
-                        }
-                        ::serde::de::VariantAccess::struct_variant(data, &[], self)
-                    }
-
-                    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-                    where
-                        A: ::serde::de::SeqAccess<'de>,
-                    {
-
-                        let req_len = $crate::bolt::structs::de::count_tts!($($name)+);
-                        let max_len = req_len + ($crate::bolt::structs::de::count_tts!($($($opt_name)+)?));
-
-                        let len = ::serde::de::SeqAccess::size_hint(&seq).unwrap_or_default();
-                        if len < req_len || len > max_len {
-                            return Err(::serde::de::Error::invalid_length(
-                                len,
-                                &format!("a sequence of length {} to {}", req_len, max_len).as_str(),
-                            ));
-                        }
-
-                        $(
-                            let $name = ::serde::de::SeqAccess::next_element(&mut seq)?
-                                .ok_or_else(|| ::serde::de::Error::missing_field(stringify!($name)))?;
-                        )+
-
-                        $(
-                            $(
-                                let $opt_name = seq.next_element()?;
-                            )+
-                        )?
-
-                        Ok($typ {
-                            $($name,)+
-                            $($($opt_name,)+)?
-                            $($($def_name: ::std::default::Default::default(),)+)?
-                        })
-                    }
-
-                    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-                    where
-                        A: ::serde::de::MapAccess<'de>,
-                    {
-                        let tag = ::serde::de::MapAccess::next_key::<u8>(&mut map)?;
-                        match tag {
-                            Some($tag) => {},
-                            Some(tag) => return Err(serde::de::Error::invalid_type(
-                                serde::de::Unexpected::Other(&format!("struct with tag {:02X}", tag)),
-                                &format!(concat!("a Bolt ", stringify!($typ), " struct (tag {:02X})"), $tag).as_str(),
-                            )),
-                            None => return Err(serde::de::Error::missing_field("tag")),
-                        };
-
-                        let this = ::serde::de::MapAccess::next_value::<Self::Value>(&mut map)?;
-                        Ok(this)
-                    }
+                    $crate::bolt::structs::de::impl_visitor!(@__inner: $typ ($($name),+ $([$($opt_name),+])?) == $tag);
                 }
 
                 Vis
@@ -406,8 +342,99 @@ macro_rules! impl_visitor {
     };
 }
 
+macro_rules! impl_visitor {
+    ($typ:ident ($($name:ident),+ $(,)? $([$($opt_name:ident),+ $(,)?])?) == $tag:literal) => {
+        impl $typ {
+            pub(super) fn visitor<'de>() -> impl ::serde::de::Visitor<'de, Value = Self> {
+                struct Vis<'de>(::std::marker::PhantomData<&'de ()>);
+
+                impl<'de> ::serde::de::Visitor<'de> for Vis<'de> {
+                    type Value = $typ;
+
+                    $crate::bolt::structs::de::impl_visitor!(@__inner: $typ ($($name),+ $([$($opt_name),+])?) == $tag);
+                }
+
+                Vis(::std::marker::PhantomData)
+            }
+        }
+    };
+
+    (@__inner: $typ:ident ($($name:ident),+ $(,)? $([$($opt_name:ident),+ $(,)?])? $({$($def_name:ident),+ $(,)?})?) == $tag:literal) => {
+        fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            write!(formatter, concat!("a valid Bolt ", stringify!($typ), " struct (tag '{}' or 0x{:02X})"), $tag, $tag)
+        }
+
+        fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
+        where
+            A: ::serde::de::EnumAccess<'de>,
+        {
+            let (tag, data) = ::serde::de::EnumAccess::variant::<u8>(data)?;
+            if tag != $tag {
+                return Err(serde::de::Error::invalid_type(
+                    serde::de::Unexpected::Other(&format!("struct with tag {:02X}", tag)),
+                    &self,
+                ));
+            }
+            ::serde::de::VariantAccess::struct_variant(data, &[], self)
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: ::serde::de::SeqAccess<'de>,
+        {
+
+            let req_len = $crate::bolt::structs::de::count_tts!($($name)+);
+            let max_len = req_len + ($crate::bolt::structs::de::count_tts!($($($opt_name)+)?));
+
+            let len = ::serde::de::SeqAccess::size_hint(&seq).unwrap_or_default();
+            if len < req_len || len > max_len {
+                return Err(::serde::de::Error::invalid_length(
+                    len,
+                    &format!("a sequence of length {} to {}", req_len, max_len).as_str(),
+                ));
+            }
+
+            $(
+                let $name = ::serde::de::SeqAccess::next_element(&mut seq)?
+                    .ok_or_else(|| ::serde::de::Error::missing_field(stringify!($name)))?;
+            )+
+
+            $(
+                $(
+                    let $opt_name = seq.next_element()?;
+                )+
+            )?
+
+            Ok($typ {
+                $($name,)+
+                $($($opt_name,)+)?
+                $($($def_name: ::std::default::Default::default(),)+)?
+            })
+        }
+
+        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+        where
+            A: ::serde::de::MapAccess<'de>,
+        {
+            let tag = ::serde::de::MapAccess::next_key::<u8>(&mut map)?;
+            match tag {
+                Some($tag) => {},
+                Some(tag) => return Err(serde::de::Error::invalid_type(
+                    serde::de::Unexpected::Other(&format!("struct with tag {:02X}", tag)),
+                    &self,
+                )),
+                None => return Err(serde::de::Error::missing_field("tag")),
+            };
+
+            let this = ::serde::de::MapAccess::next_value::<Self::Value>(&mut map)?;
+            Ok(this)
+        }
+    };
+}
+
 pub(crate) use count_tts;
 pub(crate) use impl_visitor;
+pub(crate) use impl_visitor_ref;
 
 #[cfg(test)]
 mod tests {

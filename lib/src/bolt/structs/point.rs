@@ -1,20 +1,19 @@
-use std::{fmt, marker::PhantomData};
+use std::fmt;
 
 use serde::de::{Deserialize, Deserializer, VariantAccess};
 use thiserror::Error;
 
-use crate::bolt::structs::de::impl_visitor;
+use super::de::impl_visitor;
 
 /// A representation of a single location in 2-dimensional space.
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Point2D<'de> {
+pub struct Point2D {
     srid: Crs,
     x: f64,
     y: f64,
-    _de: PhantomData<&'de ()>,
 }
 
-impl<'de> Point2D<'de> {
+impl Point2D {
     /// The Coordinate Reference System of this point.
     pub fn srid(&self) -> Crs {
         self.srid
@@ -60,15 +59,14 @@ impl<'de> Point2D<'de> {
 
 /// A representation of a single location in 3-dimensional space.
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Point3D<'de> {
+pub struct Point3D {
     srid: Crs,
     x: f64,
     y: f64,
     z: f64,
-    _de: PhantomData<&'de ()>,
 }
 
-impl<'de> Point3D<'de> {
+impl Point3D {
     /// The Coordinate Reference System of this point.
     pub fn srid(&self) -> Crs {
         self.srid
@@ -267,8 +265,8 @@ impl Point {
     }
 }
 
-impl_visitor!(Point2D<'de>(srid, x, y, { _de }) == 0x58);
-impl_visitor!(Point3D<'de>(srid, x, y, z, { _de }) == 0x59);
+impl_visitor!(Point2D(srid, x, y) == 0x58);
+impl_visitor!(Point3D(srid, x, y, z) == 0x59);
 
 impl<'de> Deserialize<'de> for Crs {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -322,7 +320,7 @@ impl<'de> Deserialize<'de> for Crs {
     }
 }
 
-impl<'de> Deserialize<'de> for Point2D<'de> {
+impl<'de> Deserialize<'de> for Point2D {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -331,7 +329,7 @@ impl<'de> Deserialize<'de> for Point2D<'de> {
     }
 }
 
-impl<'de> Deserialize<'de> for Point3D<'de> {
+impl<'de> Deserialize<'de> for Point3D {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -389,13 +387,7 @@ impl<'de> Deserialize<'de> for Point {
                     let y = seq
                         .next_element()?
                         .ok_or_else(|| ::serde::de::Error::missing_field("y"))?;
-                    Ok(Point2D {
-                        srid,
-                        x,
-                        y,
-                        _de: PhantomData,
-                    }
-                    .to_point())
+                    Ok(Point2D { srid, x, y }.to_point())
                 } else if len == 4 {
                     let srid = seq
                         .next_element()?
@@ -409,14 +401,7 @@ impl<'de> Deserialize<'de> for Point {
                     let z = seq
                         .next_element()?
                         .ok_or_else(|| ::serde::de::Error::missing_field("z"))?;
-                    Ok(Point3D {
-                        srid,
-                        x,
-                        y,
-                        z,
-                        _de: PhantomData,
-                    }
-                    .to_point())
+                    Ok(Point3D { srid, x, y, z }.to_point())
                 } else {
                     Err(::serde::de::Error::invalid_length(
                         len,
@@ -431,8 +416,8 @@ impl<'de> Deserialize<'de> for Point {
             {
                 let tag = map.next_key::<u8>()?;
                 match tag {
-                    Some(0x58) => map.next_value::<Point2D<'de>>().map(|p| p.to_point()),
-                    Some(0x59) => map.next_value::<Point3D<'de>>().map(|p| p.to_point()),
+                    Some(0x58) => map.next_value::<Point2D>().map(|p| p.to_point()),
+                    Some(0x59) => map.next_value::<Point3D>().map(|p| p.to_point()),
                     Some(tag) => {
                         return Err(serde::de::Error::invalid_type(
                             serde::de::Unexpected::Other(&format!("struct with tag {:02X}", tag)),

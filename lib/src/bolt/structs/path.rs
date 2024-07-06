@@ -1,25 +1,25 @@
 use serde::de::{Deserialize, Deserializer, Error};
 
-use crate::bolt::structs::de::impl_visitor;
+use super::de::impl_visitor_ref;
 
-use super::{urel::UnboundRelationship, Node, Relationship};
+use super::{urel::UnboundRelationshipRef, NodeRef, RelationshipRef};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Path<'de> {
-    nodes: Vec<Node<'de>>,
-    rels: Vec<UnboundRelationship<'de>>,
+pub struct PathRef<'de> {
+    nodes: Vec<NodeRef<'de>>,
+    rels: Vec<UnboundRelationshipRef<'de>>,
     indices: Vec<isize>,
 }
 
 /// A node within the graph.
-impl<'de> Path<'de> {
+impl<'de> PathRef<'de> {
     /// Returns the start [`Node`] of this path.
-    pub fn start(&self) -> &Node<'de> {
+    pub fn start(&self) -> &NodeRef<'de> {
         &self.nodes[0]
     }
 
     /// Returns the end [`Node`] of this path.
-    pub fn end(&self) -> &Node<'de> {
+    pub fn end(&self) -> &NodeRef<'de> {
         self.nodes().last().unwrap()
     }
 
@@ -34,17 +34,17 @@ impl<'de> Path<'de> {
     }
 
     /// Returns a reference to the [`Node`] with the given id if it is contained in this path.
-    pub fn get_node_by_id(&self, id: u64) -> Option<&Node<'de>> {
+    pub fn get_node_by_id(&self, id: u64) -> Option<&NodeRef<'de>> {
         self.nodes.iter().find(|o| o.id() == id)
     }
 
     /// Returns a [`Relationship`] with the given id if it is contained in this path.
-    pub fn get_relationship_by_id(&self, id: u64) -> Option<Relationship<'de>> {
+    pub fn get_relationship_by_id(&self, id: u64) -> Option<RelationshipRef<'de>> {
         self.relationships().find(|o| o.id() == id)
     }
 
     #[cfg(test)]
-    fn get_unbounded_relationship_by_id(&self, id: u64) -> Option<&UnboundRelationship<'de>> {
+    fn get_unbounded_relationship_by_id(&self, id: u64) -> Option<&UnboundRelationshipRef<'de>> {
         self.rels.iter().find(|o| o.id() == id)
     }
 
@@ -52,7 +52,7 @@ impl<'de> Path<'de> {
     /// The nodes will appear in the same order as they appear in the path
     pub fn nodes<'a>(
         &'a self,
-    ) -> impl ExactSizeIterator<Item = &'a Node<'de>> + DoubleEndedIterator + 'a {
+    ) -> impl ExactSizeIterator<Item = &'a NodeRef<'de>> + DoubleEndedIterator + 'a {
         NodesIter::new(&self.nodes, &self.indices)
     }
 
@@ -61,7 +61,7 @@ impl<'de> Path<'de> {
     /// Note that this iterator does not return references but owned types.
     /// To iterate over the individual segments of this path and delay creating new relationships,
     /// use [`Path::segments`].
-    pub fn relationships<'a>(&'a self) -> impl ExactSizeIterator<Item = Relationship<'de>> + 'a {
+    pub fn relationships<'a>(&'a self) -> impl ExactSizeIterator<Item = RelationshipRef<'de>> + 'a {
         SegmentsIter::new(&self.nodes, &self.rels, &self.indices).map(|o| o.relationship)
     }
 
@@ -76,16 +76,16 @@ impl<'de> Path<'de> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Segment<'path, 'de: 'path> {
     /// The [`Node`] at the start of the segment.
-    pub start: &'path Node<'de>,
+    pub start: &'path NodeRef<'de>,
     /// The [`UnboundRelationship`] connecting the two nodes.
     /// The [`Relationship::start_node_id()`] might be different from the [`Segment::start`] field
     /// of this segment if the relationship was traversed in inverse order.
-    pub relationship: Relationship<'de>,
+    pub relationship: RelationshipRef<'de>,
     /// The [`Node`] at the end of the segment.
-    pub end: &'path Node<'de>,
+    pub end: &'path NodeRef<'de>,
 }
 
-impl<'a, 'de: 'a> IntoIterator for &'a Path<'de> {
+impl<'a, 'de: 'a> IntoIterator for &'a PathRef<'de> {
     type Item = Segment<'a, 'de>;
 
     type IntoIter = SegmentsIter<'a, 'de>;
@@ -97,16 +97,16 @@ impl<'a, 'de: 'a> IntoIterator for &'a Path<'de> {
 
 #[doc(hidden)]
 pub struct SegmentsIter<'a, 'de: 'a> {
-    nodes: &'a [Node<'de>],
-    rels: &'a [UnboundRelationship<'de>],
+    nodes: &'a [NodeRef<'de>],
+    rels: &'a [UnboundRelationshipRef<'de>],
     indices: std::slice::ChunksExact<'a, isize>,
     last_node: usize,
 }
 
 impl<'a, 'de: 'a> SegmentsIter<'a, 'de> {
     fn new(
-        nodes: &'a [Node<'de>],
-        rels: &'a [UnboundRelationship<'de>],
+        nodes: &'a [NodeRef<'de>],
+        rels: &'a [UnboundRelationshipRef<'de>],
         indices: &'a [isize],
     ) -> Self {
         Self {
@@ -188,13 +188,13 @@ impl<'a, 'de: 'a> ExactSizeIterator for SegmentsIter<'a, 'de> {
 }
 
 struct NodesIter<'a, 'de: 'a> {
-    nodes: &'a [Node<'de>],
+    nodes: &'a [NodeRef<'de>],
     indices: std::slice::ChunksExact<'a, isize>,
     emit_start: bool,
 }
 
 impl<'a, 'de: 'a> NodesIter<'a, 'de> {
-    fn new(nodes: &'a [Node<'de>], indices: &'a [isize]) -> Self {
+    fn new(nodes: &'a [NodeRef<'de>], indices: &'a [isize]) -> Self {
         Self {
             nodes,
             indices: indices.chunks_exact(2),
@@ -207,14 +207,14 @@ impl<'a, 'de: 'a> NodesIter<'a, 'de> {
         usize::try_from(node_index).expect("Node index values must be >= 0")
     }
 
-    fn extract_node(&self, rel_and_node: &[isize]) -> &'a Node<'de> {
+    fn extract_node(&self, rel_and_node: &[isize]) -> &'a NodeRef<'de> {
         let index = Self::extract_node_index(rel_and_node);
         &self.nodes[index]
     }
 }
 
 impl<'a, 'de: 'a> Iterator for NodesIter<'a, 'de> {
-    type Item = &'a Node<'de>;
+    type Item = &'a NodeRef<'de>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let node_index = if self.emit_start {
@@ -292,9 +292,9 @@ impl<'a, 'de: 'a> DoubleEndedIterator for NodesIter<'a, 'de> {
     }
 }
 
-impl_visitor!(Path<'de>(nodes, rels, indices) == 0x50);
+impl_visitor_ref!(PathRef<'de>(nodes, rels, indices) == 0x50);
 
-impl<'de> Deserialize<'de> for Path<'de> {
+impl<'de> Deserialize<'de> for PathRef<'de> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -328,7 +328,7 @@ mod tests {
     fn deserialize() {
         let data = bolt_path();
         let mut data = Data::new(data);
-        let path: Path = from_bytes_ref(&mut data).unwrap();
+        let path: PathRef = from_bytes_ref(&mut data).unwrap();
 
         assert_eq!(path.start().id(), 42);
         assert_eq!(path.end().id(), 1);

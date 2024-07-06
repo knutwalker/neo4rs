@@ -1,19 +1,18 @@
-use std::{marker::PhantomData, str::FromStr};
+use std::str::FromStr;
 
 use serde::de::{Deserialize, Deserializer};
 
-use crate::bolt::structs::de::impl_visitor;
+use super::de::{impl_visitor, impl_visitor_ref};
 
 /// An instant capturing the date, the time, and the time zone.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct DateTime<'de> {
+pub struct DateTime {
     seconds: i64,
     nanoseconds: u32,
     tz_offset_seconds: i32,
-    _de: PhantomData<&'de ()>,
 }
 
-impl<'de> DateTime<'de> {
+impl DateTime {
     /// Seconds since Unix epoch in UTC, e.g. 0 represents 1970-01-01T00:00:01 and 1 represents 1970-01-01T00:00:02.
     pub fn seconds_since_epoch(self) -> i64 {
         self.seconds
@@ -45,13 +44,13 @@ impl<'de> DateTime<'de> {
 /// An instant capturing the date, the time, and the time zone specified with a timezone
 /// iddentifier.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct DateTimeZoneId<'de> {
+pub struct DateTimeZoneIdRef<'de> {
     seconds: i64,
     nanoseconds: u32,
     tz_id: &'de str,
 }
 
-impl<'de> DateTimeZoneId<'de> {
+impl<'de> DateTimeZoneIdRef<'de> {
     /// Seconds since Unix epoch in UTC, e.g. 0 represents 1970-01-01T00:00:01 and 1 represents 1970-01-01T00:00:02.
     pub fn seconds_since_epoch(self) -> i64 {
         self.seconds
@@ -92,13 +91,12 @@ impl<'de> DateTimeZoneId<'de> {
 
 /// An instant capturing the date, the time, and the time zone.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct LocalDateTime<'de> {
+pub struct LocalDateTime {
     seconds: i64,
     nanoseconds: u32,
-    _de: PhantomData<&'de ()>,
 }
 
-impl<'de> LocalDateTime<'de> {
+impl LocalDateTime {
     /// Seconds since Unix epoch, e.g. 0 represents 1970-01-01T00:00:01 and 1 represents 1970-01-01T00:00:02.
     pub fn seconds_since_epoch(self) -> i64 {
         self.seconds
@@ -121,14 +119,13 @@ impl<'de> LocalDateTime<'de> {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct LegacyDateTime<'de> {
+pub struct LegacyDateTime {
     seconds: i64,
     nanoseconds: u32,
     tz_offset_seconds: i32,
-    _de: PhantomData<&'de ()>,
 }
 
-impl<'de> LegacyDateTime<'de> {
+impl LegacyDateTime {
     /// Seconds since Unix epoch in the timezone of this DateTime, e.g. 0 represents 1970-01-01T00:00:01 and 1 represents 1970-01-01T00:00:02.
     pub fn seconds_since_epoch(self) -> i64 {
         self.seconds
@@ -160,13 +157,13 @@ impl<'de> LegacyDateTime<'de> {
 /// An instant capturing the date, the time, and the time zone specified with a timezone
 /// iddentifier.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct LegacyDateTimeZoneId<'de> {
+pub struct LegacyDateTimeZoneIdRef<'de> {
     seconds: i64,
     nanoseconds: u32,
     tz_id: &'de str,
 }
 
-impl<'de> LegacyDateTimeZoneId<'de> {
+impl<'de> LegacyDateTimeZoneIdRef<'de> {
     /// Seconds since Unix epoch in the timezone of this DateTime, e.g. 0 represents 1970-01-01T00:00:01 and 1 represents 1970-01-01T00:00:02.
     pub fn seconds_since_epoch(self) -> i64 {
         self.seconds
@@ -227,13 +224,13 @@ fn convert_to_chrono_datetime(
     Some((datetime, timezone))
 }
 
-impl_visitor!(DateTime<'de>(seconds, nanoseconds, tz_offset_seconds { _de }) == 0x49);
-impl_visitor!(DateTimeZoneId<'de>(seconds, nanoseconds, tz_id) == 0x69);
-impl_visitor!(LocalDateTime<'de>(seconds, nanoseconds { _de }) == 0x64);
-impl_visitor!(LegacyDateTime<'de>(seconds, nanoseconds, tz_offset_seconds { _de }) == 0x46);
-impl_visitor!(LegacyDateTimeZoneId<'de>(seconds, nanoseconds, tz_id) == 0x66);
+impl_visitor!(DateTime(seconds, nanoseconds, tz_offset_seconds) == 0x49);
+impl_visitor_ref!(DateTimeZoneIdRef<'de>(seconds, nanoseconds, tz_id) == 0x69);
+impl_visitor!(LocalDateTime(seconds, nanoseconds) == 0x64);
+impl_visitor!(LegacyDateTime(seconds, nanoseconds, tz_offset_seconds) == 0x46);
+impl_visitor_ref!(LegacyDateTimeZoneIdRef<'de>(seconds, nanoseconds, tz_id) == 0x66);
 
-impl<'de> Deserialize<'de> for DateTime<'de> {
+impl<'de> Deserialize<'de> for DateTime {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -242,34 +239,34 @@ impl<'de> Deserialize<'de> for DateTime<'de> {
     }
 }
 
-impl<'de> Deserialize<'de> for DateTimeZoneId<'de> {
+impl<'de> Deserialize<'de> for DateTimeZoneIdRef<'de> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_struct("DateTimeZoneId", &[], DateTimeZoneId::visitor())
+        deserializer.deserialize_struct("DateTimeZoneId", &[], Self::visitor())
     }
 }
 
-impl<'de> Deserialize<'de> for LocalDateTime<'de> {
+impl<'de> Deserialize<'de> for LocalDateTime {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_struct("LocalDateTime", &[], LocalDateTime::visitor())
+        deserializer.deserialize_struct("LocalDateTime", &[], Self::visitor())
     }
 }
 
-impl<'de> Deserialize<'de> for LegacyDateTime<'de> {
+impl<'de> Deserialize<'de> for LegacyDateTime {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_struct("LegacyDateTime", &[], LegacyDateTime::visitor())
+        deserializer.deserialize_struct("LegacyDateTime", &[], Self::visitor())
     }
 }
 
-impl<'de> Deserialize<'de> for LegacyDateTimeZoneId<'de> {
+impl<'de> Deserialize<'de> for LegacyDateTimeZoneIdRef<'de> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -277,7 +274,7 @@ impl<'de> Deserialize<'de> for LegacyDateTimeZoneId<'de> {
         deserializer.deserialize_struct(
             "LegacyDateTimeZoneId",
             &[],
-            LegacyDateTimeZoneId::visitor(),
+            LegacyDateTimeZoneIdRef::visitor(),
         )
     }
 }
@@ -334,7 +331,7 @@ mod tests {
             .tiny_string("Europe/Paris")
             .build();
         let mut data = Data::new(data);
-        let date: DateTimeZoneId = from_bytes_ref(&mut data).unwrap();
+        let date: DateTimeZoneIdRef = from_bytes_ref(&mut data).unwrap();
 
         let ch: chrono::DateTime<chrono_tz::Tz> = date.as_chrono_datetime().unwrap();
         assert_eq!(ch.year(), 1970);
@@ -424,7 +421,7 @@ mod tests {
             .tiny_string("Europe/Paris")
             .build();
         let mut data = Data::new(data);
-        let date: LegacyDateTimeZoneId = from_bytes_ref(&mut data).unwrap();
+        let date: LegacyDateTimeZoneIdRef = from_bytes_ref(&mut data).unwrap();
 
         let ch: chrono::DateTime<chrono_tz::Tz> = date.as_chrono_datetime().unwrap();
         assert_eq!(ch.year(), 1970);

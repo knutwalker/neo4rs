@@ -3,23 +3,22 @@ use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 
 use crate::bolt::{
     packstream::{self, Data},
-    structs::de::impl_visitor,
-    Relationship,
+    RelationshipRef,
 };
 
-use super::de::{Keys, Single};
+use super::de::{impl_visitor_ref, Keys, Single};
 
 /// An unbounded relationship within the graph.
 /// The difference to [`super::Relationship`] is that an unbounded relationship
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(super) struct UnboundRelationship<'de> {
+pub(super) struct UnboundRelationshipRef<'de> {
     id: u64,
     r#type: &'de str,
     properties: Data,
     element_id: Option<&'de str>,
 }
 
-impl<'de> UnboundRelationship<'de> {
+impl<'de> UnboundRelationshipRef<'de> {
     /// An id for this relationship.
     ///
     /// Ids are guaranteed to remain stable for the duration of the session
@@ -78,31 +77,15 @@ impl<'de> UnboundRelationship<'de> {
     }
 }
 
-impl<'de> UnboundRelationship<'de> {
-    fn new(
-        id: u64,
-        r#type: &'de str,
-        properties: impl Into<Bytes>,
-        element_id: impl Into<Option<&'de str>>,
-    ) -> Self {
-        let properties = Data::new(properties.into());
-        let element_id = element_id.into();
-        Self {
-            id,
-            r#type,
-            properties,
-            element_id,
-        }
-    }
-
+impl<'de> UnboundRelationshipRef<'de> {
     pub(crate) fn bind(
         &self,
         start_node_id: u64,
         start_node_element_id: Option<&'de str>,
         end_node_id: u64,
         end_node_element_id: Option<&'de str>,
-    ) -> super::Relationship<'de> {
-        Relationship::from_other_rel(
+    ) -> super::RelationshipRef<'de> {
+        RelationshipRef::from_other_rel(
             self.id,
             self.element_id,
             start_node_id,
@@ -115,9 +98,9 @@ impl<'de> UnboundRelationship<'de> {
     }
 }
 
-impl_visitor!(UnboundRelationship<'de>(id, r#type, properties, [element_id]) == 0x72);
+impl_visitor_ref!(UnboundRelationshipRef<'de>(id, r#type, properties, [element_id]) == 0x72);
 
-impl<'de> Deserialize<'de> for UnboundRelationship<'de> {
+impl<'de> Deserialize<'de> for UnboundRelationshipRef<'de> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -158,7 +141,12 @@ mod tests {
     #[test_case(tokens_v5())]
     #[test_case(tagged_tokens_v5())]
     fn tokens((tokens, element_id): (Vec<Token>, Option<&str>)) {
-        let rel = UnboundRelationship::new(42, "REL", properties_data(), element_id);
+        let rel = UnboundRelationshipRef {
+            id: 42,
+            r#type: "REL",
+            properties: Data::new(properties_data()),
+            element_id,
+        };
 
         assert_de_tokens(&rel, &tokens);
     }
@@ -212,7 +200,7 @@ mod tests {
         T: std::fmt::Debug + PartialEq + for<'a> Deserialize<'a>,
     {
         let mut data = Data::new(data);
-        let mut rel: UnboundRelationship = from_bytes_ref(&mut data).unwrap();
+        let mut rel: UnboundRelationshipRef = from_bytes_ref(&mut data).unwrap();
 
         assert_eq!(rel.id(), 42);
 

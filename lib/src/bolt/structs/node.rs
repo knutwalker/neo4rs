@@ -6,18 +6,18 @@ use crate::bolt::{
     structs::de::impl_visitor,
 };
 
-use super::de::{Keys, Single};
+use super::de::{impl_visitor_ref, Keys, Single};
 
 /// A node within the graph.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Node<'de> {
+pub struct NodeRef<'de> {
     id: u64,
     labels: Vec<&'de str>,
     properties: Data,
     element_id: Option<&'de str>,
 }
 
-impl<'de> Node<'de> {
+impl<'de> NodeRef<'de> {
     /// An id for this node.
     ///
     /// Ids are guaranteed to remain stable for the duration of the session
@@ -76,7 +76,7 @@ impl<'de> Node<'de> {
     }
 }
 
-impl<'de> Node<'de> {
+impl<'de> NodeRef<'de> {
     fn new(
         id: u64,
         labels: impl IntoIterator<Item = &'de str>,
@@ -95,9 +95,9 @@ impl<'de> Node<'de> {
     }
 }
 
-impl_visitor!(Node<'de>(id, labels, properties, [element_id]) == 0x4E);
+impl_visitor_ref!(NodeRef<'de>(id, labels, properties, [element_id]) == 0x4E);
 
-impl<'de> Deserialize<'de> for Node<'de> {
+impl<'de> Deserialize<'de> for NodeRef<'de> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -138,7 +138,7 @@ mod tests {
     #[test_case(tokens_v5())]
     #[test_case(tagged_tokens_v5())]
     fn tokens((tokens, element_id): (Vec<Token>, Option<&str>)) {
-        let rel = Node::new(42, ["Label"], properties_data(), element_id);
+        let rel = NodeRef::new(42, ["Label"], properties_data(), element_id);
 
         assert_de_tokens(&rel, &tokens);
     }
@@ -194,7 +194,7 @@ mod tests {
         T: std::fmt::Debug + PartialEq + for<'a> Deserialize<'a>,
     {
         let mut data = Data::new(data);
-        let mut node: Node = from_bytes_ref(&mut data).unwrap();
+        let mut node: NodeRef = from_bytes_ref(&mut data).unwrap();
 
         assert_eq!(node.id(), 42);
         assert_eq!(node.labels(), &["Label"]);

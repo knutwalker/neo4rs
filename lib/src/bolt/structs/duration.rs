@@ -1,9 +1,9 @@
-use std::{marker::PhantomData, time::Duration as StdDuration};
+use std::time::Duration as StdDuration;
 
 use serde::de::{Deserialize, Deserializer};
 use thiserror::Error;
 
-use crate::bolt::structs::de::impl_visitor;
+use super::de::impl_visitor;
 
 /// A temporal amount.
 /// This captures the difference in time between two instants.
@@ -12,15 +12,14 @@ use crate::bolt::structs::de::impl_visitor;
 /// The time is represented as a number of months, days, seconds and nanoseconds.
 /// The duration can be negative.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Duration<'de> {
+pub struct Duration {
     months: i64,
     days: i64,
     seconds: i64,
     nanoseconds: i32,
-    _de: PhantomData<&'de ()>,
 }
 
-impl<'de> Duration<'de> {
+impl Duration {
     /// Months in this duration.
     pub fn months(self) -> i64 {
         self.months
@@ -200,9 +199,9 @@ fn calculate_duration(
     }
 }
 
-impl_visitor!(Duration<'de>(months, days, seconds, nanoseconds, { _de }) == 0x45);
+impl_visitor!(Duration(months, days, seconds, nanoseconds) == 0x45);
 
-impl<'de> Deserialize<'de> for Duration<'de> {
+impl<'de> Deserialize<'de> for Duration {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,

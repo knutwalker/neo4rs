@@ -1,17 +1,16 @@
-use std::{marker::PhantomData, time::Duration};
+use std::time::Duration;
 
 use serde::de::{Deserialize, Deserializer};
 
-use crate::bolt::structs::de::impl_visitor;
+use super::de::impl_visitor;
 
 /// A date without a time-zone in the ISO-8601 calendar system.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Date<'de> {
+pub struct Date {
     days: i64,
-    _de: PhantomData<&'de ()>,
 }
 
-impl<'de> Date<'de> {
+impl Date {
     /// Days since Unix epoch, e.g. 0 represents 1970-01-01 and 1 represents 1970-01-02.
     pub fn days(self) -> i64 {
         self.days
@@ -80,9 +79,9 @@ impl DateDuration {
     }
 }
 
-impl_visitor!(Date<'de>(days { _de }) == 0x44);
+impl_visitor!(Date(days) == 0x44);
 
-impl<'de> Deserialize<'de> for Date<'de> {
+impl<'de> Deserialize<'de> for Date {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,

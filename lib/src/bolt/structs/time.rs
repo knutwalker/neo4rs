@@ -1,18 +1,17 @@
-use std::{marker::PhantomData, time::Duration};
+use std::time::Duration;
 
 use serde::de::{Deserialize, Deserializer};
 
-use crate::bolt::structs::de::impl_visitor;
+use super::de::impl_visitor;
 
 /// An instant capturing the time of day, and the timezone, but not the date.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Time<'de> {
+pub struct Time {
     nanoseconds: u64,
     tz_offset_seconds: i32,
-    _de: PhantomData<&'de ()>,
 }
 
-impl<'de> Time<'de> {
+impl Time {
     /// Nanoseconds since midnight in the timezone of this time, not in UTC.
     pub fn nanoseconds_since_midnight(self) -> u64 {
         self.nanoseconds
@@ -47,9 +46,9 @@ impl<'de> Time<'de> {
     }
 }
 
-impl_visitor!(Time<'de>(nanoseconds, tz_offset_seconds { _de }) == 0x54);
+impl_visitor!(Time(nanoseconds, tz_offset_seconds) == 0x54);
 
-impl<'de> Deserialize<'de> for Time<'de> {
+impl<'de> Deserialize<'de> for Time {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -60,12 +59,11 @@ impl<'de> Deserialize<'de> for Time<'de> {
 
 /// An instant capturing the time of day, but neither the date nor the time zone.
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct LocalTime<'de> {
+pub struct LocalTime {
     nanoseconds: i64,
-    _de: PhantomData<&'de ()>,
 }
 
-impl<'de> LocalTime<'de> {
+impl LocalTime {
     /// Nanoseconds since midnight.
     pub fn nanoseconds_since_midnight(self) -> u64 {
         self.nanoseconds.unsigned_abs()
@@ -95,9 +93,9 @@ impl<'de> LocalTime<'de> {
     }
 }
 
-impl_visitor!(LocalTime<'de>(nanoseconds { _de }) == 0x74);
+impl_visitor!(LocalTime(nanoseconds) == 0x74);
 
-impl<'de> Deserialize<'de> for LocalTime<'de> {
+impl<'de> Deserialize<'de> for LocalTime {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,

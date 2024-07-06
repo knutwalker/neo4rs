@@ -20,8 +20,9 @@ pub use packstream::value::bolt;
 pub use packstream::{de, ser};
 pub use request::{Commit, Discard, Goodbye, Hello, Pull, Reset, Rollback, WrapExtra};
 pub use structs::{
-    Bolt, Date, DateDuration, DateTime, DateTimeZoneId, LegacyDateTime, LegacyDateTimeZoneId,
-    LocalDateTime, LocalTime, Node, Path, Relationship, Segment, Time,
+    BoltRef, Date, DateDuration, DateTime, DateTimeZoneIdRef, LegacyDateTime,
+    LegacyDateTimeZoneIdRef, LocalDateTime, LocalTime, NodeRef, PathRef, RelationshipRef, Segment,
+    Time,
 };
 pub use summary::{Failure, Streaming, StreamingSummary, Success, Summary};
 

@@ -6,11 +6,11 @@ use crate::bolt::{
     structs::de::impl_visitor,
 };
 
-use super::de::{Keys, Single};
+use super::de::{impl_visitor_ref, Keys, Single};
 
 /// A relationship within the graph.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Relationship<'de> {
+pub struct RelationshipRef<'de> {
     id: u64,
     start_node_id: u64,
     end_node_id: u64,
@@ -21,7 +21,7 @@ pub struct Relationship<'de> {
     end_node_element_id: Option<&'de str>,
 }
 
-impl<'de> Relationship<'de> {
+impl<'de> RelationshipRef<'de> {
     /// An id for this relationship.
     ///
     /// Ids are guaranteed to remain stable for the duration of the session
@@ -100,7 +100,7 @@ impl<'de> Relationship<'de> {
     }
 }
 
-impl<'de> Relationship<'de> {
+impl<'de> RelationshipRef<'de> {
     fn new(
         id: u64,
         start_node_id: u64,
@@ -150,9 +150,9 @@ impl<'de> Relationship<'de> {
     }
 }
 
-impl_visitor!(Relationship<'de>(id, start_node_id, end_node_id, r#type, properties, [element_id, start_node_element_id, end_node_element_id]) == 0x52);
+impl_visitor_ref!(RelationshipRef<'de>(id, start_node_id, end_node_id, r#type, properties, [element_id, start_node_element_id, end_node_element_id]) == 0x52);
 
-impl<'de> Deserialize<'de> for Relationship<'de> {
+impl<'de> Deserialize<'de> for RelationshipRef<'de> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -193,7 +193,7 @@ mod tests {
     #[test_case(tokens_v5())]
     #[test_case(tagged_tokens_v5())]
     fn tokens((tokens, element_ids): (Vec<Token>, Option<ElementIds<'static>>)) {
-        let rel = Relationship::new(
+        let rel = RelationshipRef::new(
             42,
             84,
             1337,
@@ -272,7 +272,7 @@ mod tests {
         T: std::fmt::Debug + PartialEq + for<'a> Deserialize<'a>,
     {
         let mut data = Data::new(data);
-        let mut rel: Relationship = from_bytes_ref(&mut data).unwrap();
+        let mut rel: RelationshipRef = from_bytes_ref(&mut data).unwrap();
 
         assert_eq!(rel.id(), 42);
         assert_eq!(rel.start_node_id(), 84);

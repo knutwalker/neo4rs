@@ -2,13 +2,13 @@ use std::collections::HashMap;
 
 pub use self::date::{Date, DateDuration};
 pub use self::datetime::{
-    DateTime, DateTimeZoneId, LegacyDateTime, LegacyDateTimeZoneId, LocalDateTime,
+    DateTime, DateTimeZoneIdRef, LegacyDateTime, LegacyDateTimeZoneIdRef, LocalDateTime,
 };
 pub use self::duration::Duration;
-pub use self::node::Node;
-pub use self::path::{Path, Segment};
+pub use self::node::NodeRef;
+pub use self::path::{PathRef, Segment};
 pub use self::point::{Point2D, Point3D};
-pub use self::rel::Relationship;
+pub use self::rel::RelationshipRef;
 pub use self::time::{LocalTime, Time};
 
 mod date;
@@ -24,32 +24,32 @@ mod urel;
 
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
-pub enum Bolt<'de> {
+pub enum BoltRef<'de> {
     Null,
     Boolean(bool),
     Integer(i64),
     Float(f64),
     Bytes(&'de [u8]),
     String(&'de str),
-    List(Vec<Bolt<'de>>),
-    Dictionary(HashMap<&'de str, Bolt<'de>>),
-    Node(Node<'de>),
-    Relationship(Relationship<'de>),
-    Path(Path<'de>),
-    Date(Date<'de>),
-    Time(Time<'de>),
-    LocalTime(LocalTime<'de>),
-    DateTime(DateTime<'de>),
-    DateTimeZoneId(DateTimeZoneId<'de>),
-    LocalDateTime(LocalDateTime<'de>),
-    Duration(Duration<'de>),
-    Point2D(Point2D<'de>),
-    Point3D(Point3D<'de>),
-    LegacyDateTime(LegacyDateTime<'de>),
-    LegacyDateTimeZoneId(LegacyDateTimeZoneId<'de>),
+    List(Vec<BoltRef<'de>>),
+    Dictionary(HashMap<&'de str, BoltRef<'de>>),
+    Node(NodeRef<'de>),
+    Relationship(RelationshipRef<'de>),
+    Path(PathRef<'de>),
+    Date(Date),
+    Time(Time),
+    LocalTime(LocalTime),
+    DateTime(DateTime),
+    DateTimeZoneId(DateTimeZoneIdRef<'de>),
+    LocalDateTime(LocalDateTime),
+    Duration(Duration),
+    Point2D(Point2D),
+    Point3D(Point3D),
+    LegacyDateTime(LegacyDateTime),
+    LegacyDateTimeZoneId(LegacyDateTimeZoneIdRef<'de>),
 }
 
-impl<'de> From<()> for Bolt<'de> {
+impl<'de> From<()> for BoltRef<'de> {
     fn from(_: ()) -> Self {
         Self::Null
     }
@@ -61,7 +61,7 @@ macro_rules! impl_from {
     };
     ($case:ident($target:ty): $($t:ty),+ $(,)?) => {
         $(
-            impl<'de> From<$t> for Bolt<'de> {
+            impl<'de> From<$t> for BoltRef<'de> {
                 fn from(value: $t) -> Self {
                     Self::$case(<$target>::from(value))
                 }
@@ -75,27 +75,27 @@ impl_from!(Integer(i64): u8, u16, u32, i8, i16, i32, i64);
 impl_from!(Float(f64): f32, f64);
 impl_from!(Bytes(&'de [u8]));
 impl_from!(String(&'de str));
-impl_from!(List(Vec<Bolt<'de>>): Vec<Bolt<'de>>, &'de [Bolt<'de>]);
-impl_from!(Dictionary(HashMap<&'de str, Bolt<'de>>));
-impl_from!(Node(Node<'de>));
-impl_from!(Relationship(Relationship<'de>));
-impl_from!(Path(Path<'de>));
-impl_from!(Date(Date<'de>));
-impl_from!(Time(Time<'de>));
-impl_from!(LocalTime(LocalTime<'de>));
-impl_from!(DateTime(DateTime<'de>));
-impl_from!(DateTimeZoneId(DateTimeZoneId<'de>));
-impl_from!(LocalDateTime(LocalDateTime<'de>));
-impl_from!(LegacyDateTime(LegacyDateTime<'de>));
-impl_from!(LegacyDateTimeZoneId(LegacyDateTimeZoneId<'de>));
-impl_from!(Duration(Duration<'de>));
-impl_from!(Point2D(Point2D<'de>));
-impl_from!(Point3D(Point3D<'de>));
+impl_from!(List(Vec<BoltRef<'de>>): Vec<BoltRef<'de>>, &'de [BoltRef<'de>]);
+impl_from!(Dictionary(HashMap<&'de str, BoltRef<'de>>));
+impl_from!(Node(NodeRef<'de>));
+impl_from!(Relationship(RelationshipRef<'de>));
+impl_from!(Path(PathRef<'de>));
+impl_from!(Date(Date));
+impl_from!(Time(Time));
+impl_from!(LocalTime(LocalTime));
+impl_from!(DateTime(DateTime));
+impl_from!(DateTimeZoneId(DateTimeZoneIdRef<'de>));
+impl_from!(LocalDateTime(LocalDateTime));
+impl_from!(LegacyDateTime(LegacyDateTime));
+impl_from!(LegacyDateTimeZoneId(LegacyDateTimeZoneIdRef<'de>));
+impl_from!(Duration(Duration));
+impl_from!(Point2D(Point2D));
+impl_from!(Point3D(Point3D));
 
 macro_rules! impl_try_from_int {
     ($($t:ty),*) => {
         $(
-            impl<'de> TryFrom<$t> for Bolt<'de> {
+            impl<'de> TryFrom<$t> for BoltRef<'de> {
                 type Error = ::std::num::TryFromIntError;
 
                 fn try_from(value: $t) -> Result<Self, Self::Error> {
@@ -111,19 +111,19 @@ macro_rules! impl_try_from_int {
 
 impl_try_from_int!(u64, isize, usize, u128, i128);
 
-impl<'de> FromIterator<Bolt<'de>> for Bolt<'de> {
+impl<'de> FromIterator<BoltRef<'de>> for BoltRef<'de> {
     fn from_iter<I>(iter: I) -> Self
     where
-        I: IntoIterator<Item = Bolt<'de>>,
+        I: IntoIterator<Item = BoltRef<'de>>,
     {
         Self::List(iter.into_iter().collect())
     }
 }
 
-impl<'de> FromIterator<(&'de str, Bolt<'de>)> for Bolt<'de> {
+impl<'de> FromIterator<(&'de str, BoltRef<'de>)> for BoltRef<'de> {
     fn from_iter<I>(iter: I) -> Self
     where
-        I: IntoIterator<Item = (&'de str, Bolt<'de>)>,
+        I: IntoIterator<Item = (&'de str, BoltRef<'de>)>,
     {
         Self::Dictionary(iter.into_iter().collect())
     }
