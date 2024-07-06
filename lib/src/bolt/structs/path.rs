@@ -317,10 +317,7 @@ impl<'de> Deserialize<'de> for PathRef<'de> {
 mod tests {
     use bytes::Bytes;
 
-    use crate::bolt::{
-        bolt,
-        packstream::{from_bytes_ref, Data},
-    };
+    use crate::bolt::{bolt, from_bytes_ref, Data};
 
     use super::*;
 

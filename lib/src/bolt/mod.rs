@@ -16,8 +16,8 @@ mod summary;
 #[cfg(debug_assertions)]
 pub use packstream::debug::Dbg;
 #[cfg(test)]
-pub use packstream::value::bolt;
-pub use packstream::{de, ser};
+pub use packstream::value::{bolt, BoltBytesBuilder};
+pub use packstream::{de, from_bytes, ser, to_bytes};
 pub use request::{Commit, Discard, Goodbye, Hello, Pull, Reset, Rollback, WrapExtra};
 pub use structs::{
     BoltRef, Date, DateDuration, DateTime, DateTimeZoneIdRef, LegacyDateTime,
@@ -26,6 +26,8 @@ pub use structs::{
 };
 pub use summary::{Failure, Streaming, StreamingSummary, Success, Summary};
 
+pub(crate) use packstream::{from_bytes_ref, from_bytes_seed, Data};
+
 pub(crate) trait Message: Serialize {
     /// Serialize this type into a packstream encoded byte slice.
     fn to_bytes(&self) -> Result<Bytes, ser::Error>;
@@ -33,7 +35,7 @@ pub(crate) trait Message: Serialize {
 
 impl<T: Serialize> Message for T {
     fn to_bytes(&self) -> Result<Bytes, ser::Error> {
-        packstream::to_bytes(self)
+        to_bytes(self)
     }
 }
 
@@ -44,7 +46,7 @@ pub(crate) trait MessageResponse: Sized {
 
 impl<T: DeserializeOwned> MessageResponse for T {
     fn parse(bytes: Bytes) -> Result<Self, de::Error> {
-        packstream::from_bytes(bytes)
+        from_bytes(bytes)
     }
 }
 

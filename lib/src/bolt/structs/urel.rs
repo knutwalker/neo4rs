@@ -1,10 +1,7 @@
 use bytes::Bytes;
 use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 
-use crate::bolt::{
-    packstream::{self, Data},
-    RelationshipRef,
-};
+use crate::bolt::{de, from_bytes, from_bytes_ref, from_bytes_seed, Data, RelationshipRef};
 
 use super::de::{impl_visitor_ref, Keys, Single};
 
@@ -53,27 +50,25 @@ impl<'de> UnboundRelationshipRef<'de> {
     pub fn get<'this, T: Deserialize<'this> + 'this>(
         &'this mut self,
         key: &str,
-    ) -> Result<Option<T>, packstream::de::Error> {
+    ) -> Result<Option<T>, de::Error> {
         self.properties.reset();
-        packstream::from_bytes_seed(&mut self.properties, Single::new(key))
+        from_bytes_seed(&mut self.properties, Single::new(key))
     }
 
     /// Deserialize the node to a type that implements [`serde::Deserialize`].
     /// The target type may borrow data from the node's properties.
-    pub fn to<'this, T: Deserialize<'this> + 'this>(
-        &'this mut self,
-    ) -> Result<T, packstream::de::Error>
+    pub fn to<'this, T: Deserialize<'this> + 'this>(&'this mut self) -> Result<T, de::Error>
     where
         'de: 'this,
     {
         self.properties.reset();
-        packstream::from_bytes_ref(&mut self.properties)
+        from_bytes_ref(&mut self.properties)
     }
 
     /// Convert the node into a type that implements [`serde::Deserialize`].
     /// The target type must not borrow data from the node's properties.
-    pub fn into<T: DeserializeOwned>(self) -> Result<T, packstream::de::Error> {
-        packstream::from_bytes(self.properties.into_inner())
+    pub fn into<T: DeserializeOwned>(self) -> Result<T, de::Error> {
+        from_bytes(self.properties.into_inner())
     }
 }
 
@@ -117,10 +112,7 @@ mod tests {
     use serde_test::{assert_de_tokens, Token};
     use test_case::{test_case, test_matrix};
 
-    use crate::bolt::{
-        bolt,
-        packstream::{from_bytes_ref, value::BoltBytesBuilder, Data},
-    };
+    use crate::bolt::{bolt, from_bytes_ref, BoltBytesBuilder, Data};
 
     use super::*;
 

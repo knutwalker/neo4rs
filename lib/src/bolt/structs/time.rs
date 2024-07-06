@@ -110,10 +110,7 @@ mod tests {
     use chrono::{Datelike, FixedOffset, Timelike};
     use time::UtcOffset;
 
-    use crate::bolt::{
-        bolt,
-        packstream::{from_bytes_ref, Data},
-    };
+    use crate::bolt::{bolt, from_bytes_ref, Data};
 
     use super::*;
 
