@@ -105,9 +105,9 @@ where
 }
 
 /// Parse and deserialize a packstream value from the given bytes.
-pub(crate) fn from_bytes_ref<'de, T: 'de>(bytes: &'de mut Data) -> Result<T, de::Error>
+pub(crate) fn from_bytes_ref<'de, T>(bytes: &'de mut Data) -> Result<T, de::Error>
 where
-    T: Deserialize<'de>,
+    T: Deserialize<'de> + 'de,
 {
     let de = de::Deserializer::new(bytes.bytes_mut());
     let value = T::deserialize(de)?;
