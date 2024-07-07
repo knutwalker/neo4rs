@@ -106,15 +106,11 @@ impl RowStream {
                 break Ok(RowItem::Row(row));
             }
 
-            match self.state {
-                State::Ready => {
-                    let pull = Pull::some(self.fetch_size as i64).for_query(self.qid);
-                    let connection = handle.connection();
-                    connection.send_as(pull).await?;
-                    self.state = State::Pulling;
-                }
-                State::Pulling => {
-                    let connection = handle.connection();
+            if self.state == State::Ready {
+                let pull = Pull::some(self.fetch_size as i64).for_query(self.qid);
+                let connection = handle.connection();
+                connection.send_as(pull).await?;
+                self.state = loop {
                     let response = connection
                         .recv_as::<Response<Vec<Bolt>, Streaming>>()
                         .await?;
@@ -129,19 +125,16 @@ impl RowStream {
                             let row = Row::new(self.fields.clone(), record);
                             self.buffer.push_back(row);
                         }
-                        Response::Success(Streaming::HasMore) => self.state = State::Ready,
-                        Response::Success(Streaming::Done(s)) => {
-                            self.state = State::Complete(Some(s))
-                        }
+                        Response::Success(Streaming::HasMore) => break State::Ready,
+                        Response::Success(Streaming::Done(s)) => break State::Complete(Some(s)),
                         otherwise => return Err(otherwise.into_error("PULL")),
                     }
-                }
-                State::Complete(ref mut summary) => {
-                    break match summary.take() {
-                        Some(summary) => Ok(RowItem::Summary(summary)),
-                        None => Ok(RowItem::Done),
-                    };
-                }
+                };
+            } else if let State::Complete(ref mut summary) = self.state {
+                break match summary.take() {
+                    Some(summary) => Ok(RowItem::Summary(summary)),
+                    None => Ok(RowItem::Done),
+                };
             }
         }
     }
@@ -153,28 +146,32 @@ impl RowStream {
         mut handle: impl TransactionHandle,
     ) -> Result<Option<StreamingSummary>> {
         loop {
-            if let State::Complete(s) = self.state {
-                return Ok(s.map(|o| *o));
-            }
-            let summary = {
-                let connected = handle.connection();
-                connected
-                    .send_recv_as(Discard::all().for_query(self.qid))
-                    .await
-            }?;
-            match summary {
-                Summary::Success(s) => match s.metadata {
-                    Streaming::Done(summary) => self.state = State::Complete(Some(summary)),
-                    Streaming::HasMore => {}
-                },
-                Summary::Ignored => self.state = State::Complete(None),
-                Summary::Failure(f) => {
-                    self.state = State::Complete(None);
-                    return Err(Error::Failure {
-                        code: f.code,
-                        message: f.message,
-                        msg: "DISCARD",
-                    });
+            match self.state {
+                State::Ready => {
+                    let summary = {
+                        let connected = handle.connection();
+                        connected
+                            .send_recv_as(Discard::all().for_query(self.qid))
+                            .await
+                    }?;
+                    match summary {
+                        Summary::Success(s) => match s.metadata {
+                            Streaming::Done(summary) => self.state = State::Complete(Some(summary)),
+                            Streaming::HasMore => {}
+                        },
+                        Summary::Ignored => self.state = State::Complete(None),
+                        Summary::Failure(f) => {
+                            self.state = State::Complete(None);
+                            return Err(Error::Failure {
+                                code: f.code,
+                                message: f.message,
+                                msg: "DISCARD",
+                            });
+                        }
+                    }
+                }
+                State::Complete(ref mut summary) => {
+                    break Ok(summary.take().map(|o| *o));
                 }
             }
         }
@@ -485,6 +482,5 @@ impl DetachedRowStream {
 #[derive(Clone, PartialEq, Debug)]
 enum State {
     Ready,
-    Pulling,
     Complete(Option<Box<StreamingSummary>>),
 }
