@@ -99,8 +99,7 @@ pub enum ConversionError {
     /// ```rust
     /// let seconds_per_day = 86400;
     /// let days_per_year = 365.2425;
-    /// let seconds_per_year = u64::try_from(days_per_year * f64::from(seconds_per_day))
-    ///     .expect("calculation results in an integer");
+    /// let seconds_per_year = (days_per_year * f64::from(seconds_per_day)) as u64;
     /// let months_per_year = 12;
     /// let seconds_per_month = seconds_per_year / months_per_year;
     /// assert_eq!(seconds_per_month, 2629746);
