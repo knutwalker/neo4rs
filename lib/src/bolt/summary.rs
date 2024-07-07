@@ -1,9 +1,11 @@
-use std::{fmt, marker::PhantomData};
+use std::{collections::HashMap, fmt, marker::PhantomData};
 
 use ::serde::{
     de::{self, VariantAccess as _, Visitor},
     Deserialize,
 };
+
+use crate::bolt::Bolt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Summary<R> {
@@ -103,10 +105,10 @@ pub struct StreamingSummary {
     pub(crate) t_last: Option<i64>,
     pub(crate) r#type: Option<Type>,
     pub(crate) db: Option<String>,
-    pub(crate) stats: Option<crate::BoltMap>,
-    pub(crate) plan: Option<crate::BoltMap>,
-    pub(crate) profile: Option<crate::BoltMap>,
-    pub(crate) notifications: Option<Vec<crate::BoltMap>>,
+    pub(crate) stats: Option<HashMap<String, Bolt>>,
+    pub(crate) plan: Option<HashMap<String, Bolt>>,
+    pub(crate) profile: Option<HashMap<String, Bolt>>,
+    pub(crate) notifications: Option<Vec<HashMap<String, Bolt>>>,
 }
 
 impl<'de> Deserialize<'de> for Type {
@@ -269,10 +271,6 @@ impl<'de> Deserialize<'de> for Streaming {
                     return Ok(Streaming::HasMore);
                 }
 
-                let t_last = t_last.ok_or_else(|| de::Error::missing_field("t_last"))?;
-                let r#type = r#type.ok_or_else(|| de::Error::missing_field("type"))?;
-                let db = db.ok_or_else(|| de::Error::missing_field("db"))?;
-
                 let full = StreamingSummary {
                     bookmark,
                     t_last,
@@ -295,10 +293,7 @@ impl<'de> Deserialize<'de> for Streaming {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        bolt::{packstream::value::bolt, MessageResponse as _},
-        BoltMap, BoltString, BoltType,
-    };
+    use crate::bolt::{packstream::value::bolt, MessageResponse as _};
 
     #[test]
     fn parse_hello_success() {
@@ -393,10 +388,10 @@ mod tests {
             t_last: Some(42),
             r#type: Some(Type::ReadWrite),
             db: Some("neo4j".to_owned()),
-            stats: Some(BoltMap::from_iter([
-                (BoltString::from("labels-added"), BoltType::from(1)),
-                (BoltString::from("nodes-created"), BoltType::from(2)),
-                (BoltString::from("properties-set"), BoltType::from(3)),
+            stats: Some(HashMap::from_iter([
+                (String::from("labels-added"), Bolt::from(1)),
+                (String::from("nodes-created"), Bolt::from(2)),
+                (String::from("properties-set"), Bolt::from(3)),
             ])),
             plan: None,
             profile: None,
