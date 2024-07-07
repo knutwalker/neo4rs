@@ -23,6 +23,18 @@ pub struct RowStream {
     buffer: VecDeque<Row>,
 }
 
+impl RowStream {
+    pub(crate) fn new(qid: i64, fields: BoltList, fetch_size: usize) -> Self {
+        RowStream {
+            qid,
+            fields,
+            fetch_size,
+            state: State::Ready,
+            buffer: VecDeque::with_capacity(fetch_size),
+        }
+    }
+}
+
 /// An abstraction over a stream of rows, this is returned as a result of [`crate::Graph::execute`].
 ///
 /// A stream will contain a connection from the connection pool which will be released to the pool
@@ -31,6 +43,12 @@ pub struct RowStream {
 pub struct DetachedRowStream {
     stream: RowStream,
     connection: ManagedConnection,
+}
+
+impl DetachedRowStream {
+    pub(crate) fn new(stream: RowStream, connection: ManagedConnection) -> Self {
+        DetachedRowStream { stream, connection }
+    }
 }
 
 pub enum RowItem<T = Row> {
@@ -70,24 +88,6 @@ impl<T> RowItem<T> {
 }
 
 impl RowStream {
-    pub(crate) fn new(qid: i64, fields: BoltList, fetch_size: usize) -> Self {
-        RowStream {
-            qid,
-            fields,
-            fetch_size,
-            state: State::Ready,
-            buffer: VecDeque::with_capacity(fetch_size),
-        }
-    }
-}
-
-impl DetachedRowStream {
-    pub(crate) fn new(stream: RowStream, connection: ManagedConnection) -> Self {
-        DetachedRowStream { stream, connection }
-    }
-}
-
-impl RowStream {
     /// A call to next() will return a row from an internal buffer if the buffer has any entries,
     /// if the buffer is empty and the server has more rows left to consume, then a new batch of rows
     /// are fetched from the server (using the fetch_size value configured see [`crate::ConfigBuilder::fetch_size`])
@@ -114,6 +114,7 @@ impl RowStream {
                     let response = connection
                         .recv_as::<Response<Vec<Bolt>, Streaming>>()
                         .await?;
+                    dbg!(&response);
                     match response {
                         Response::Detail(record) => {
                             let record = BoltList::from(
@@ -145,35 +146,38 @@ impl RowStream {
         mut self,
         mut handle: impl TransactionHandle,
     ) -> Result<Option<StreamingSummary>> {
-        loop {
-            match self.state {
-                State::Ready => {
-                    let summary = {
-                        let connected = handle.connection();
-                        connected
-                            .send_recv_as(Discard::all().for_query(self.qid))
-                            .await
-                    }?;
-                    match summary {
-                        Summary::Success(s) => match s.metadata {
-                            Streaming::Done(summary) => self.state = State::Complete(Some(summary)),
-                            Streaming::HasMore => {}
-                        },
-                        Summary::Ignored => self.state = State::Complete(None),
-                        Summary::Failure(f) => {
-                            self.state = State::Complete(None);
-                            return Err(Error::Failure {
-                                code: f.code,
-                                message: f.message,
-                                msg: "DISCARD",
-                            });
+        self.buffer.clear();
+
+        match self.state {
+            State::Ready => {
+                let summary = {
+                    let connected = handle.connection();
+                    connected
+                        .send_recv_as(Discard::all().for_query(self.qid))
+                        .await
+                }?;
+                let summary = match summary {
+                    Summary::Success(s) => match s.metadata {
+                        Streaming::Done(summary) => Some(*summary),
+                        Streaming::HasMore => {
+                            // this should never happen
+                            None
                         }
+                    },
+                    Summary::Ignored => None,
+                    Summary::Failure(f) => {
+                        self.state = State::Complete(None);
+                        return Err(Error::Failure {
+                            code: f.code,
+                            message: f.message,
+                            msg: "DISCARD",
+                        });
                     }
-                }
-                State::Complete(ref mut summary) => {
-                    break Ok(summary.take().map(|o| *o));
-                }
+                };
+                self.state = State::Complete(None);
+                Ok(summary)
             }
+            State::Complete(summary) => Ok(summary.map(|o| *o)),
         }
     }
 
